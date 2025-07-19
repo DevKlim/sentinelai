@@ -51,9 +51,9 @@ services:
     depends_on:
       - eido_db
     environment:
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
       - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
-      - LLM_PROVIDER=openrouter
-      - OPENROUTER_API_KEY=AIzaSyDQN7wmwnA7sWNilhwufrytRn2U7ad51yY
+      - LLM_PROVIDER=gemini
       - PORT=8000
     networks:
       - sds_network
