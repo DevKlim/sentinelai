@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   sds_network:
     driver: bridge
@@ -45,29 +43,33 @@ services:
   eido_api:
     build:
       context: ./eido-agent
-    command: uvicorn api.main:app --host 0.0.0.0 --port 8000
+    command: ["api"]
     volumes:
       - ./eido-agent:/app
     ports:
-      - "8001:8000"
+      - "8004:8000"
     depends_on:
       - eido_db
     environment:
-      - DATABASE_URL=postgresql://user:password@eido_db/eido_db
-      - GOOGLE_API_KEY=your_api_key_here # Added placeholder
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - LLM_PROVIDER=openrouter
+      - OPENROUTER_API_KEY=AIzaSyDQN7wmwnA7sWNilhwufrytRn2U7ad51yY
+      - PORT=8000
     networks:
       - sds_network
 
   eido_streamlit:
     build:
       context: ./eido-agent
-    command: streamlit run ui/app.py
+    command: ["ui"]
     volumes:
       - ./eido-agent:/app
     ports:
       - "8502:8501"
     depends_on:
       - eido_api
+    environment:
+      - PORT=8501
     networks:
       - sds_network
 
@@ -79,16 +81,16 @@ services:
       - ../idx-agent/.env
     environment:
       - API_HOST=0.0.0.0
-      - API_PORT=8001
+      - API_PORT=8002
       - DOCKER_ENV=true
     volumes:
       - ../idx-agent/data:/app/data
     ports:
-      - "8002:8001"
+      - "8002:8002"
     networks:
       - sds_network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -104,11 +106,73 @@ services:
     env_file:
       - ../idx-agent/.env
     environment:
-      - API_BASE_URL=http://idx_api:8001
+      - API_BASE_URL=http://idx_api:8002
       - STREAMLIT_SERVER_PORT=8502
       - DOCKER_ENV=true
     ports:
       - "8503:8502"
+    networks:
+      - sds_network
+
+  geocoding_service:
+    build:
+      context: ../llm-geocoding-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8005
+    ports:
+      - "8005:8005"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    networks:
+      - sds_network
+
+  realtime_alerts:
+    build:
+      context: ../realtime-alert-system
+    command: uvicorn main:app --host 0.0.0.0 --port 8006
+    ports:
+      - "8006:8006"
+    depends_on:
+      - eido_db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - sds_network
+
+  psap_coordinator:
+    build:
+      context: ../cross-psap-coordinator
+    command: uvicorn main:app --host 0.0.0.0 --port 8007
+    ports:
+      - "8007:8007"
+    depends_on:
+      - eido_db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+    networks:
+      - sds_network
+
+  duplicate_responder:
+    build:
+      context: ../duplicate-incident-responder
+    command: uvicorn main:app --host 0.0.0.0 --port 8008
+    ports:
+      - "8008:8008"
+    depends_on:
+      - eido_db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - sds_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     networks:
       - sds_network
 
