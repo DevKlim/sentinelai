@@ -1,6 +1,7 @@
 
 import streamlit as st
 import httpx
+import pandas as pd
 
 EIDO_AGENT_URL = "http://eido-agent-api:8000"
 
@@ -24,6 +25,24 @@ def eido_agent_page():
                     st.error(f"Error connecting to EIDO Agent: {e}")
         else:
             st.warning("Please enter some text to convert.")
+
+    st.header("EIDO Feed")
+    if st.button("Refresh EIDO Feed"):
+        with st.spinner("Loading EIDO feed..."):
+            try:
+                response = httpx.get(f"{EIDO_AGENT_URL}/api/v1/eidos")
+                response.raise_for_status()
+                eidos = response.json()
+
+                if eidos:
+                    df = pd.DataFrame(eidos)
+                    st.dataframe(df)
+                else:
+                    st.info("No EIDOs found.")
+            except httpx.HTTPStatusError as e:
+                st.error(f"Error from EIDO Agent: {e.response.text}")
+            except httpx.RequestError as e:
+                st.error(f"Error connecting to EIDO Agent: {e}")
 
 if __name__ == "__main__":
     eido_agent_page()
