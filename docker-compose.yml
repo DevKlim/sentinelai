@@ -1,5 +1,3 @@
-version: '3.8'
-
 networks:
   sds_network:
     driver: bridge
@@ -67,7 +65,7 @@ services:
     networks:
       - sds_network
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:8001/health" ]
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -79,6 +77,68 @@ services:
     command: uvicorn api.main:app --host 0.0.0.0 --port 8005
     volumes:
       - ../llm-geocoding-service:/app
+    networks:
+      - sds_network
+
+  geocoding_service:
+    build:
+      context: ../llm-geocoding-service
+    command: uvicorn main:app --host 0.0.0.0 --port 8005
+    ports:
+      - "8005:8005"
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - GOOGLE_MAPS_API_KEY=${GOOGLE_MAPS_API_KEY}
+    networks:
+      - sds_network
+
+  realtime_alerts:
+    build:
+      context: ../realtime-alert-system
+    command: uvicorn main:app --host 0.0.0.0 --port 8006
+    ports:
+      - "8006:8006"
+    depends_on:
+      - eido_db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - sds_network
+
+  psap_coordinator:
+    build:
+      context: ../cross-psap-coordinator
+    command: uvicorn main:app --host 0.0.0.0 --port 8007
+    ports:
+      - "8007:8007"
+    depends_on:
+      - eido_db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+    networks:
+      - sds_network
+
+  duplicate_responder:
+    build:
+      context: ../duplicate-incident-responder
+    command: uvicorn main:app --host 0.0.0.0 --port 8008
+    ports:
+      - "8008:8008"
+    depends_on:
+      - eido_db
+      - redis
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - sds_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
     networks:
       - sds_network
 
