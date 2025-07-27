@@ -1,0 +1,129 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDSC Orchestrator Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="dashboard-grid">
+        <aside class="dashboard-sidebar">
+            <div class="sidebar-header">
+                <a href="/" class="logo">SDSC Orchestrator</a>
+            </div>
+            <ul class="sidebar-menu">
+                <li class="active"><a href="#">Dashboard</a></li>
+                <li><a href="#">EIDO Agent</a></li>
+                <li><a href="#">IDX Agent</a></li>
+                <li><a href="#">Settings</a></li>
+            </ul>
+        </aside>
+
+        <main class="dashboard-main">
+            <header class="dashboard-header">
+                <h1>Dashboard</h1>
+            </header>
+
+            <div class="dashboard-content">
+                <div class="main-content">
+                    <div class="row">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    Key Metrics
+                                </div>
+                                <div class="card-body">
+                                    <div id="key-metrics" class="row"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    EIDO Agent
+                                </div>
+                                <div class="card-body">
+                                    <form>
+                                        <div class="form-group">
+                                            <label for="raw-text">Raw Text</label>
+                                            <textarea class="form-control" id="raw-text" rows="3"></textarea>
+                                        </div>
+                                        <button type="button" class="btn btn-primary" id="convert-eido">Convert to EIDO</button>
+                                    </form>
+                                    <hr>
+                                    <form>
+                                        <div class="form-group">
+                                            <label for="eido-file">Upload EIDO JSON</label>
+                                            <input type="file" class="form-control-file" id="eido-file">
+                                        </div>
+                                        <button type="button" class="btn btn-primary" id="upload-eido">Upload</button>
+                                    </form>
+                                    <hr>
+                                    <h5>Incidents</h5>
+                                    <div id="eido-incident-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-header">
+                                    IDX Agent
+                                </div>
+                                <div class="card-body">
+                                    <h5>Correlated Incidents</h5>
+                                    <div id="idx-incident-list"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    Incident Map
+                                </div>
+                                <div class="card-body">
+                                    <div id="mapid" style="height: 500px;"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="side-content">
+                    <div class="card">
+                        <div class="card-header">
+                            Feed Digest
+                        </div>
+                        <div class="card-body">
+                            <div id="feed-digest"></div>
+                        </div>
+                    </div>
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            Incident Status
+                        </div>
+                        <div class="card-body">
+                            <canvas id="incident-chart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

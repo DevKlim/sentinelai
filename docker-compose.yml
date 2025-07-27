@@ -6,24 +6,15 @@ networks:
 
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     ports:
       - "80:80"
     depends_on:
-      - api
       - eido_api
       - idx_api
       - llm_geocoding_service
-    networks:
-      - sds_network
-
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile.api
-    command: uvicorn main:app --host 0.0.0.0 --port 5000
-    volumes:
-      - .:/app
     networks:
       - sds_network
 
@@ -85,7 +76,7 @@ services:
   llm_geocoding_service:
     build:
       context: ../llm-geocoding-service
-    command: uvicorn prediction:app --host 0.0.0.0 --port 8005
+    command: uvicorn api.main:app --host 0.0.0.0 --port 8005
     volumes:
       - ../llm-geocoding-service:/app
     networks:

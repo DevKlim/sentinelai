@@ -1,0 +1,121 @@
+/* General Styles */
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    background-color: #f0f2f5;
+    color: #1a1a1a;
+}
+
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    height: 100vh;
+}
+
+/* Sidebar */
+.dashboard-sidebar {
+    background-color: #fff;
+    border-right: 1px solid #e0e0e0;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.logo {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: #1a1a1a;
+    text-decoration: none;
+}
+
+.sidebar-menu {
+    list-style: none;
+    padding: 20px;
+    margin: 0;
+}
+
+.sidebar-menu li a {
+    display: block;
+    padding: 10px 20px;
+    color: #5a5a5a;
+    text-decoration: none;
+    border-radius: 5px;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+.sidebar-menu li.active a,
+.sidebar-menu li a:hover {
+    background-color: #007bff;
+    color: #fff;
+}
+
+/* Main Content */
+.dashboard-main {
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.dashboard-header {
+    margin-bottom: 20px;
+}
+
+.dashboard-content {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 20px;
+}
+
+.card {
+    background-color: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.06);
+}
+
+.card-header {
+    font-size: 1.25rem;
+    font-weight: 600;
+    padding: 20px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.card-body {
+    padding: 20px;
+}
+
+/* Feed Digest */
+.feed-item {
+    display: flex;
+    margin-bottom: 15px;
+}
+
+.feed-source {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 600;
+    margin-right: 15px;
+}
+
+.feed-source.eido {
+    background-color: #007bff;
+}
+
+.feed-source.idx {
+    background-color: #28a745;
+}
+
+.feed-title {
+    font-weight: 600;
+}
+
+.feed-summary {
+    color: #5a5a5a;
+}
