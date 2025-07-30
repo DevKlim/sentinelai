@@ -1,96 +1,19 @@
+
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SDSC Orchestrator</title>
-    <link rel="stylesheet" href="landing.css">
-    <script type="module" src="https://unpkg.com/@splinetool/viewer@1.0.94/build/spline-viewer.js"></script>
-</head>
-<body>
-    <header class="navbar">
-        <div class="container">
-            <a href="#" class="logo">SDSC Orchestrator</a>
-            <nav>
-                <a href="#features">Features</a>
-                <a href="#about">About</a>
-                <a href="#demo">Demo</a>
-                <a href="/dashboard/index.html" class="btn btn-primary">Dashboard</a>
-            </nav>
-        </div>
-    </header>
+    <meta name="description" content="The SDSC Orchestrator is a multi-agentic system for emergency response and incident management." />
+    <meta name="author" content="SDSC" />
+    <meta property="og:image" content="/og-image.png" />
+    <link rel="stylesheet" href="/index.css">
+    <link rel="stylesheet" href="/style.css">
+  </head>
 
-    <main>
-        <section class="hero">
-            <div class="container">
-                <div class="hero-content">
-                    <h1 class="hero-title">The Next-Generation Emergency Response Hub</h1>
-                    <p class="hero-subtitle">Unifying data, empowering responders, and saving lives through intelligent automation and seamless coordination.</p>
-                    <a href="#demo" class="btn btn-primary">Request a Demo</a>
-                </div>
-                <div class="hero-spline">
-                    <spline-viewer url="https://prod.spline.design/b2F5-i2a-F5b-i3d/scene.splinecode"></spline-viewer>
-                </div>
-            </div>
-        </section>
-
-        <section id="features" class="features">
-            <div class="container">
-                <h2 class="section-title">A Unified Platform for a Smarter Response</h2>
-                <div class="feature-grid">
-                    <div class="feature-card">
-                        <h3>Automated EIDO Ingestion</h3>
-                        <p>Ingest and standardize Emergency Incident Data Objects (EIDO) from any source, including raw text, emails, and structured data feeds. Our system automatically extracts key information, saving valuable time and reducing manual data entry.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>LLM-Powered Geocoding</h3>
-                        <p>Pinpoint incident locations with unparalleled accuracy. Our Large Language Models can understand and geolocate addresses from unstructured text, even with incomplete or ambiguous information.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Intelligent Incident Correlation</h3>
-                        <p>Our IDX agent automatically identifies and links related incidents, providing a clear and comprehensive operational picture. Reduce clutter, eliminate duplicate efforts, and ensure a coordinated response.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Cross-PSAP Coordination</h3>
-                        <p>Break down communication silos between Public Safety Answering Points (PSAPs). Share critical incident data seamlessly and securely, enabling a truly unified response across jurisdictions.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Real-time Alerting & Notifications</h3>
-                        <p>Stay informed with customizable, real-time alerts. Configure triggers based on incident type, location, or severity, and receive notifications through your preferred channels.</p>
-                    </div>
-                    <div class="feature-card">
-                        <h3>Advanced Analytics & Reporting</h3>
-                        <p>Gain valuable insights into your operations with our powerful analytics dashboard. Track key metrics, identify trends, and generate comprehensive reports to improve future responses.</p>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section id="demo" class="demo">
-            <div class="container">
-                <h2 class="section-title">Request a Demo</h2>
-                <p class="section-subtitle">See how the SDSC Orchestrator can transform your emergency response operations. Fill out the form below to schedule a personalized demo with our team.</p>
-                <form class="demo-form">
-                    <input type="text" placeholder="Your Name" required>
-                    <input type="email" placeholder="Your Email" required>
-                    <input type="text" placeholder="Your Organization" required>
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                </form>
-            </div>
-        </section>
-
-        <section id="about" class="about">
-            <div class="container">
-                <h2 class="section-title">About Us</h2>
-                <p>We are a team of researchers and engineers at the San Diego Supercomputer Center (SDSC) dedicated to improving emergency response through cutting-edge technology. The SDSC Orchestrator is an open-source project aimed at providing a powerful, flexible, and accessible platform for public safety agencies of all sizes.</p>
-            </div>
-        </section>
-    </main>
-
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2025 San Diego Supercomputer Center. All rights reserved.</p>
-        </div>
-    </footer>
-</body>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.tsx"></script>
+  </body>
 </html>
