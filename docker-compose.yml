@@ -8,17 +8,24 @@ volumes:
   postgres_data:
 
 services:
+  nginx:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "80:80"
+    depends_on:
+      - landing
+      - dashboard
+      - eido_streamlit
+      - idx_ui
+    networks:
+      - sds_network
+
   landing:
     build:
       context: ./landing
       dockerfile: Dockerfile
-    ports:
-      - "8088:80"
-    depends_on:
-      api:
-        condition: service_healthy
-      dashboard:
-        condition: service_started
     networks:
       - sds_network
 
@@ -75,6 +82,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@eido_db/${POSTGRES_DB:-eido_db}
       - PORT=8000
+      - GOOGLE_API_KEY=AIzaSyAHuryisMCDSBBp0nR5TlQwAMYgSZcILPA
     networks:
       - sds_network
     env_file:
@@ -150,7 +158,7 @@ services:
     build:
       context: ./sentinelai/dashboard
     ports:
-      - "8080:8080"
+      - "8501:8080"
     volumes:
       - ./sentinelai/dashboard:/app
     depends_on:

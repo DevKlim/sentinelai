@@ -1,772 +1,777 @@
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Search Incidents - Sentinel AI</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            min-height: 100vh;
-            color: #ffffff;
-        }
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        min-height: 100vh;
+        color: #ffffff;
+      }
 
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
 
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            letter-spacing: 1px;
-        }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+      }
 
-        .header p {
-            color: #cccccc;
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
+      .header p {
+        color: #cccccc;
+        font-size: 1.1rem;
+        font-weight: 300;
+      }
 
-        .search-container {
-            background: #111111;
-            border: 1px solid #333333;
-            border-radius: 12px;
-            padding: 3rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
+      .search-container {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 3rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+      }
 
-        .search-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid transparent;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
+      .search-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
 
-        .search-container:hover::before {
-            border-color: #ffffff;
-        }
+      .search-container:hover::before {
+        border-color: #ffffff;
+      }
 
-        .search-section {
-            margin-bottom: 2rem;
-        }
+      .search-section {
+        margin-bottom: 2rem;
+      }
 
-        .section-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-        }
+      .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+      }
 
-        .section-title i {
-            margin-right: 0.5rem;
-        }
+      .section-title i {
+        margin-right: 0.5rem;
+      }
 
+      .search-form {
+        display: flex;
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .search-input {
+        flex: 1;
+        padding: 1rem 1.5rem;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+
+      .search-input:focus {
+        outline: none;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 2rem;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+
+      .btn-primary {
+        background: #ffffff;
+        color: #000000;
+        border-color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+      }
+
+      .btn-secondary {
+        background: #1a1a1a;
+        color: #ffffff;
+        border-color: #333333;
+      }
+
+      .btn-secondary:hover {
+        border-color: #ffffff;
+        background: #222222;
+      }
+
+      .btn i {
+        margin-right: 0.5rem;
+      }
+
+      .filters {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 2rem;
+      }
+
+      .filter-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .filter-label {
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        font-size: 0.9rem;
+      }
+
+      .filter-select {
+        padding: 0.75rem;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+
+      .filter-select:focus {
+        outline: none;
+        border-color: #ffffff;
+      }
+
+      .results-container {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        display: none;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .results-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
+
+      .results-container:hover::before {
+        border-color: #ffffff;
+      }
+
+      .results-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 2rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #333333;
+      }
+
+      .results-count {
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .results-actions {
+        display: flex;
+        gap: 1rem;
+      }
+
+      .incident-card {
+        background: #1a1a1a;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .incident-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
+
+      .incident-card:hover::before {
+        border-color: #ffffff;
+        transform: scale(1.01);
+      }
+
+      .incident-card:hover {
+        background: #222222;
+        transform: translateY(-2px);
+      }
+
+      .incident-card.high-priority {
+        border-left: 4px solid #ff4444;
+      }
+
+      .incident-card.medium-priority {
+        border-left: 4px solid #ffaa00;
+      }
+
+      .incident-card.low-priority {
+        border-left: 4px solid #ffffff;
+      }
+
+      .incident-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        margin-bottom: 1rem;
+      }
+
+      .incident-title {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.1rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .incident-meta {
+        display: flex;
+        gap: 1rem;
+        font-size: 0.9rem;
+        color: #cccccc;
+        margin-bottom: 1rem;
+      }
+
+      .incident-meta span {
+        display: flex;
+        align-items: center;
+      }
+
+      .incident-meta i {
+        margin-right: 0.5rem;
+      }
+
+      .priority-badge {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        text-transform: uppercase;
+      }
+
+      .priority-high {
+        background: rgba(255, 68, 68, 0.1);
+        color: #ff4444;
+      }
+
+      .priority-medium {
+        background: rgba(255, 170, 0, 0.1);
+        color: #ffaa00;
+      }
+
+      .priority-low {
+        background: rgba(255, 255, 255, 0.1);
+        color: #ffffff;
+      }
+
+      .incident-description {
+        color: #cccccc;
+        line-height: 1.6;
+        margin-bottom: 1rem;
+      }
+
+      .incident-location {
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+      }
+
+      .incident-details {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+        gap: 1rem;
+        font-size: 0.9rem;
+      }
+
+      .detail-item {
+        display: flex;
+        align-items: center;
+      }
+
+      .detail-item i {
+        margin-right: 0.5rem;
+        color: #ffffff;
+        width: 16px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 3rem;
+        color: #ffffff;
+      }
+
+      .loading i {
+        font-size: 2rem;
+        animation: spin 1s linear infinite;
+        margin-bottom: 1rem;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .no-results {
+        text-align: center;
+        padding: 3rem;
+        color: #cccccc;
+      }
+
+      .no-results i {
+        font-size: 3rem;
+        color: #333333;
+        margin-bottom: 1rem;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 8px;
+      }
+
+      .back-link:hover {
+        border-color: #ffffff;
+        background: #1a1a1a;
+        transform: translateX(-5px);
+      }
+
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+
+      @media (max-width: 768px) {
         .search-form {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-
-        .search-input {
-            flex: 1;
-            padding: 1rem 1.5rem;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .search-input:focus {
-            outline: none;
-            border-color: #ffffff;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem 2rem;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: inherit;
-            background: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .btn-primary {
-            background: #ffffff;
-            color: #000000;
-            border-color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-secondary {
-            background: #1a1a1a;
-            color: #ffffff;
-            border-color: #333333;
-        }
-
-        .btn-secondary:hover {
-            border-color: #ffffff;
-            background: #222222;
-        }
-
-        .btn i {
-            margin-right: 0.5rem;
+          flex-direction: column;
         }
 
         .filters {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
+          grid-template-columns: 1fr;
         }
 
-        .filter-group {
-            display: flex;
-            flex-direction: column;
+        .container {
+          padding: 1rem;
         }
 
-        .filter-label {
-            font-weight: 500;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-
-        .filter-select {
-            padding: 0.75rem;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            font-size: 0.9rem;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .filter-select:focus {
-            outline: none;
-            border-color: #ffffff;
-        }
-
+        .search-container,
         .results-container {
-            background: #111111;
-            border: 1px solid #333333;
-            border-radius: 12px;
-            padding: 2rem;
-            display: none;
-            position: relative;
-            overflow: hidden;
+          padding: 2rem;
         }
-
-        .results-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid transparent;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-
-        .results-container:hover::before {
-            border-color: #ffffff;
-        }
-
-        .results-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid #333333;
-        }
-
-        .results-count {
-            font-weight: 600;
-            color: #ffffff;
-        }
-
-        .results-actions {
-            display: flex;
-            gap: 1rem;
-        }
-
-        .incident-card {
-            background: #1a1a1a;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .incident-card::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid transparent;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
-
-        .incident-card:hover::before {
-            border-color: #ffffff;
-            transform: scale(1.01);
-        }
-
-        .incident-card:hover {
-            background: #222222;
-            transform: translateY(-2px);
-        }
-
-        .incident-card.high-priority {
-            border-left: 4px solid #ff4444;
-        }
-
-        .incident-card.medium-priority {
-            border-left: 4px solid #ffaa00;
-        }
-
-        .incident-card.low-priority {
-            border-left: 4px solid #ffffff;
-        }
-
-        .incident-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 1rem;
-        }
-
-        .incident-title {
-            font-weight: 600;
-            color: #ffffff;
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-        }
-
-        .incident-meta {
-            display: flex;
-            gap: 1rem;
-            font-size: 0.9rem;
-            color: #cccccc;
-            margin-bottom: 1rem;
-        }
-
-        .incident-meta span {
-            display: flex;
-            align-items: center;
-        }
-
-        .incident-meta i {
-            margin-right: 0.5rem;
-        }
-
-        .priority-badge {
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            text-transform: uppercase;
-        }
-
-        .priority-high {
-            background: rgba(255, 68, 68, 0.1);
-            color: #ff4444;
-        }
-
-        .priority-medium {
-            background: rgba(255, 170, 0, 0.1);
-            color: #ffaa00;
-        }
-
-        .priority-low {
-            background: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-        }
-
-        .incident-description {
-            color: #cccccc;
-            line-height: 1.6;
-            margin-bottom: 1rem;
-        }
-
-        .incident-location {
-            font-weight: 500;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-        }
-
-        .incident-details {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-            font-size: 0.9rem;
-        }
-
-        .detail-item {
-            display: flex;
-            align-items: center;
-        }
-
-        .detail-item i {
-            margin-right: 0.5rem;
-            color: #ffffff;
-            width: 16px;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 3rem;
-            color: #ffffff;
-        }
-
-        .loading i {
-            font-size: 2rem;
-            animation: spin 1s linear infinite;
-            margin-bottom: 1rem;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .no-results {
-            text-align: center;
-            padding: 3rem;
-            color: #cccccc;
-        }
-
-        .no-results i {
-            font-size: 3rem;
-            color: #333333;
-            margin-bottom: 1rem;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: #ffffff;
-            text-decoration: none;
-            font-weight: 500;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-            padding: 0.75rem 1.5rem;
-            background: #111111;
-            border: 1px solid #333333;
-            border-radius: 8px;
-        }
-
-        .back-link:hover {
-            border-color: #ffffff;
-            background: #1a1a1a;
-            transform: translateX(-5px);
-        }
-
-        .back-link i {
-            margin-right: 0.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .search-form {
-                flex-direction: column;
-            }
-            
-            .filters {
-                grid-template-columns: 1fr;
-            }
-            
-            .container {
-                padding: 1rem;
-            }
-            
-            .search-container, .results-container {
-                padding: 2rem;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <a href="/" class="back-link">
-            <i class="fas fa-arrow-left"></i>
-            Back to Dashboard
-        </a>
+      <a href="/" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </a>
 
-        <div class="header">
-            <h1>🔍 Search Incidents</h1>
-            <p>Search and analyze emergency incident reports with advanced filtering</p>
+      <div class="header">
+        <h1>🔍 Search Incidents</h1>
+        <p>
+          Search and analyze emergency incident reports with advanced filtering
+        </p>
+      </div>
+
+      <div class="search-container">
+        <div class="search-section">
+          <div class="section-title">
+            <i class="fas fa-search"></i>
+            Search Incidents
+          </div>
+
+          <form class="search-form" id="search-form">
+            <input
+              type="text"
+              class="search-input"
+              id="search-query"
+              placeholder="Search by incident type, location, description..."
+              value=""
+            />
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-search"></i>
+              Search
+            </button>
+          </form>
+
+          <div class="filters">
+            <div class="filter-group">
+              <label class="filter-label">Incident Type</label>
+              <select class="filter-select" id="filter-type">
+                <option value="">All Types</option>
+                <option value="fire">Fire</option>
+                <option value="medical">Medical Emergency</option>
+                <option value="traffic">Traffic Accident</option>
+                <option value="crime">Crime</option>
+                <option value="natural_disaster">Natural Disaster</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Priority Level</label>
+              <select class="filter-select" id="filter-priority">
+                <option value="">All Priorities</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Date Range</label>
+              <select class="filter-select" id="filter-date">
+                <option value="">All Time</option>
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month">This Month</option>
+                <option value="year">This Year</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label class="filter-label">Location</label>
+              <input
+                type="text"
+                class="filter-select"
+                id="filter-location"
+                placeholder="City, State, or ZIP"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="results-container" id="results-container">
+        <div class="results-header">
+          <div class="results-count" id="results-count">0 results found</div>
+          <div class="results-actions">
+            <button class="btn btn-secondary" onclick="exportResults()">
+              <i class="fas fa-download"></i>
+              Export
+            </button>
+            <button class="btn btn-secondary" onclick="clearResults()">
+              <i class="fas fa-times"></i>
+              Clear
+            </button>
+          </div>
         </div>
 
-        <div class="search-container">
-            <div class="search-section">
-                <div class="section-title">
-                    <i class="fas fa-search"></i>
-                    Search Incidents
-                </div>
-                
-                <form class="search-form" id="search-form">
-                    <input type="text" class="search-input" id="search-query" placeholder="Search by incident type, location, description..." value="">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-search"></i>
-                        Search
-                    </button>
-                </form>
-
-                <div class="filters">
-                    <div class="filter-group">
-                        <label class="filter-label">Incident Type</label>
-                        <select class="filter-select" id="filter-type">
-                            <option value="">All Types</option>
-                            <option value="fire">Fire</option>
-                            <option value="medical">Medical Emergency</option>
-                            <option value="traffic">Traffic Accident</option>
-                            <option value="crime">Crime</option>
-                            <option value="natural_disaster">Natural Disaster</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">Priority Level</label>
-                        <select class="filter-select" id="filter-priority">
-                            <option value="">All Priorities</option>
-                            <option value="high">High</option>
-                            <option value="medium">Medium</option>
-                            <option value="low">Low</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">Date Range</label>
-                        <select class="filter-select" id="filter-date">
-                            <option value="">All Time</option>
-                            <option value="today">Today</option>
-                            <option value="week">This Week</option>
-                            <option value="month">This Month</option>
-                            <option value="year">This Year</option>
-                        </select>
-                    </div>
-                    
-                    <div class="filter-group">
-                        <label class="filter-label">Location</label>
-                        <input type="text" class="filter-select" id="filter-location" placeholder="City, State, or ZIP">
-                    </div>
-                </div>
-            </div>
+        <div id="results-list">
+          <!-- Results will be populated here -->
         </div>
-
-        <div class="results-container" id="results-container">
-            <div class="results-header">
-                <div class="results-count" id="results-count">0 results found</div>
-                <div class="results-actions">
-                    <button class="btn btn-secondary" onclick="exportResults()">
-                        <i class="fas fa-download"></i>
-                        Export
-                    </button>
-                    <button class="btn btn-secondary" onclick="clearResults()">
-                        <i class="fas fa-times"></i>
-                        Clear
-                    </button>
-                </div>
-            </div>
-            
-            <div id="results-list">
-                <!-- Results will be populated here -->
-            </div>
-        </div>
+      </div>
     </div>
 
     <script>
-        let currentResults = [];
+      let currentResults = [];
 
-        document.getElementById('search-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            await performSearch();
+      document
+        .getElementById("search-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+          await performSearch();
         });
 
-        // Auto-search when filters change
-        document.querySelectorAll('.filter-select, #filter-location').forEach(filter => {
-            filter.addEventListener('change', performSearch);
+      // Auto-search when filters change
+      document
+        .querySelectorAll(".filter-select, #filter-location")
+        .forEach((filter) => {
+          filter.addEventListener("change", performSearch);
         });
 
-        document.getElementById('filter-location').addEventListener('input', debounce(performSearch, 500));
+      document
+        .getElementById("filter-location")
+        .addEventListener("input", debounce(performSearch, 500));
 
-        async function performSearch() {
-            const query = document.getElementById('search-query').value;
-            const type = document.getElementById('filter-type').value;
-            const priority = document.getElementById('filter-priority').value;
-            const date = document.getElementById('filter-date').value;
-            const location = document.getElementById('filter-location').value;
+      async function performSearch() {
+        const query = document.getElementById("search-query").value;
+        // The backend doesn't support these filters yet, but they are here for future use.
+        const type = document.getElementById("filter-type").value;
+        const priority = document.getElementById("filter-priority").value;
+        const date = document.getElementById("filter-date").value;
+        const location = document.getElementById("filter-location").value;
 
-            // Show loading
-            showLoading();
+        // Show loading
+        showLoading();
 
-            try {
-                // For demo purposes, we'll simulate search results
-                // In a real implementation, this would call the IDX API
-                const results = await simulateSearch(query, type, priority, date, location);
-                displayResults(results);
-            } catch (error) {
-                console.error('Search error:', error);
-                showError('Error performing search. Please try again.');
-            }
+        try {
+          const searchParams = new URLSearchParams({ query });
+          const response = await fetch(`?${searchParams.toString()}`);
+          if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(
+              `HTTP error! status: ${response.status}, message: ${errorText}`
+            );
+          }
+          const results = await response.json();
+
+          // The IDX agent might return results in a specific format.
+          // This display function expects an array of objects.
+          // We'll optimistically assume the result is an array.
+          if (Array.isArray(results)) {
+            displayResults(results);
+          } else {
+            showError("Received unexpected data format from search API.");
+          }
+        } catch (error) {
+          console.error("Search error:", error);
+          showError(`Error performing search: ${error.message}`);
         }
+      }
 
-        async function simulateSearch(query, type, priority, date, location) {
-            // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 1000));
+      function displayResults(results) {
+        currentResults = results;
+        const container = document.getElementById("results-container");
+        const list = document.getElementById("results-list");
+        const count = document.getElementById("results-count");
 
-            // Mock data for demonstration
-            const mockIncidents = [
-                {
-                    id: 1,
-                    title: "Fire at Downtown Office Building",
-                    type: "fire",
-                    priority: "high",
-                    description: "Large fire reported at 123 Main Street office building. Multiple floors affected. Fire department responding.",
-                    location: "123 Main Street, Downtown, CA 90210",
-                    date: "2024-01-15T14:30:00Z",
-                    people_involved: 25,
-                    injuries: "minor",
-                    status: "active"
-                },
-                {
-                    id: 2,
-                    title: "Traffic Accident on Highway 101",
-                    type: "traffic",
-                    priority: "medium",
-                    description: "Multi-vehicle accident on northbound Highway 101 near exit 45. Traffic backed up for 2 miles.",
-                    location: "Highway 101, Exit 45, San Francisco, CA",
-                    date: "2024-01-15T13:15:00Z",
-                    people_involved: 8,
-                    injuries: "serious",
-                    status: "resolved"
-                },
-                {
-                    id: 3,
-                    title: "Medical Emergency - Heart Attack",
-                    type: "medical",
-                    priority: "high",
-                    description: "Patient experiencing chest pain and shortness of breath. Possible heart attack symptoms.",
-                    location: "456 Oak Avenue, Residential District, CA 90211",
-                    date: "2024-01-15T12:45:00Z",
-                    people_involved: 1,
-                    injuries: "serious",
-                    status: "active"
-                }
-            ];
+        container.style.display = "block";
+        count.textContent = `${results.length} result${
+          results.length !== 1 ? "s" : ""
+        } found`;
 
-            // Filter results based on search criteria
-            let filtered = mockIncidents;
-
-            if (query) {
-                filtered = filtered.filter(incident => 
-                    incident.title.toLowerCase().includes(query.toLowerCase()) ||
-                    incident.description.toLowerCase().includes(query.toLowerCase()) ||
-                    incident.location.toLowerCase().includes(query.toLowerCase())
-                );
-            }
-
-            if (type) {
-                filtered = filtered.filter(incident => incident.type === type);
-            }
-
-            if (priority) {
-                filtered = filtered.filter(incident => incident.priority === priority);
-            }
-
-            if (location) {
-                filtered = filtered.filter(incident => 
-                    incident.location.toLowerCase().includes(location.toLowerCase())
-                );
-            }
-
-            return filtered;
-        }
-
-        function displayResults(results) {
-            currentResults = results;
-            const container = document.getElementById('results-container');
-            const list = document.getElementById('results-list');
-            const count = document.getElementById('results-count');
-
-            container.style.display = 'block';
-            count.textContent = `${results.length} result${results.length !== 1 ? 's' : ''} found`;
-
-            if (results.length === 0) {
-                list.innerHTML = `
+        if (results.length === 0) {
+          list.innerHTML = `
                     <div class="no-results">
                         <i class="fas fa-search"></i>
                         <h3>No incidents found</h3>
                         <p>Try adjusting your search criteria or filters</p>
                     </div>
                 `;
-                return;
-            }
+          return;
+        }
 
-            list.innerHTML = results.map(incident => `
-                <div class="incident-card ${incident.priority}-priority">
+        // Note: This assumes the API returns data in a format similar to the original mock data.
+        // If the IDX agent returns a different structure (e.g., from a vector store),
+        // this rendering logic will need to be adapted.
+        list.innerHTML = results
+          .map(
+            (incident) => `
+                <div class="incident-card ${
+                  incident.priority || "low"
+                }-priority">
                     <div class="incident-header">
                         <div>
-                            <div class="incident-title">${incident.title}</div>
+                            <div class="incident-title">${
+                              incident.title ||
+                              incident.name ||
+                              "Untitled Incident"
+                            }</div>
                             <div class="incident-meta">
-                                <span><i class="fas fa-calendar"></i> ${formatDate(incident.date)}</span>
-                                <span><i class="fas fa-clock"></i> ${formatTime(incident.date)}</span>
-                                <span><i class="fas fa-user"></i> ${incident.people_involved} people</span>
+                                <span><i class="fas fa-calendar"></i> ${formatDate(
+                                  incident.date || incident.created_at
+                                )}</span>
+                                <span><i class="fas fa-clock"></i> ${formatTime(
+                                  incident.date || incident.created_at
+                                )}</span>
+                                <span><i class="fas fa-user"></i> ${
+                                  incident.people_involved || "N/A"
+                                } people</span>
                             </div>
                         </div>
-                        <span class="priority-badge priority-${incident.priority}">${incident.priority}</span>
+                        <span class="priority-badge priority-${
+                          incident.priority || "low"
+                        }">${incident.priority || "N/A"}</span>
                     </div>
                     
-                    <div class="incident-description">${incident.description}</div>
+                    <div class="incident-description">${
+                      incident.description ||
+                      incident.summary ||
+                      "No description."
+                    }</div>
                     
                     <div class="incident-location">
-                        <i class="fas fa-map-marker-alt"></i> ${incident.location}
+                        <i class="fas fa-map-marker-alt"></i> ${
+                          incident.location || "Unknown location"
+                        }
                     </div>
                     
                     <div class="incident-details">
                         <div class="detail-item">
                             <i class="fas fa-tag"></i>
-                            <span>${incident.type}</span>
+                            <span>${
+                              incident.type || incident.incident_type || "N/A"
+                            }</span>
                         </div>
                         <div class="detail-item">
                             <i class="fas fa-heartbeat"></i>
-                            <span>${incident.injuries} injuries</span>
+                            <span>${incident.injuries || "N/A"} injuries</span>
                         </div>
                         <div class="detail-item">
                             <i class="fas fa-circle"></i>
-                            <span>${incident.status}</span>
+                            <span>${incident.status || "N/A"}</span>
                         </div>
                     </div>
                 </div>
-            `).join('');
-        }
+            `
+          )
+          .join("");
+      }
 
-        function showLoading() {
-            const container = document.getElementById('results-container');
-            const list = document.getElementById('results-list');
-            
-            container.style.display = 'block';
-            list.innerHTML = `
+      function showLoading() {
+        const container = document.getElementById("results-container");
+        const list = document.getElementById("results-list");
+
+        container.style.display = "block";
+        list.innerHTML = `
                 <div class="loading">
                     <i class="fas fa-spinner"></i>
                     <p>Searching incidents...</p>
                 </div>
             `;
-        }
+      }
 
-        function showError(message) {
-            const container = document.getElementById('results-container');
-            const list = document.getElementById('results-list');
-            
-            container.style.display = 'block';
-            list.innerHTML = `
+      function showError(message) {
+        const container = document.getElementById("results-container");
+        const list = document.getElementById("results-list");
+
+        container.style.display = "block";
+        list.innerHTML = `
                 <div class="no-results">
                     <i class="fas fa-exclamation-triangle"></i>
                     <h3>Search Error</h3>
                     <p>${message}</p>
                 </div>
             `;
+      }
+
+      function formatDate(dateString) {
+        if (!dateString) return "N/A";
+        return new Date(dateString).toLocaleDateString();
+      }
+
+      function formatTime(dateString) {
+        if (!dateString) return "N/A";
+        return new Date(dateString).toLocaleTimeString();
+      }
+
+      function exportResults() {
+        if (currentResults.length === 0) {
+          alert("No results to export");
+          return;
         }
 
-        function formatDate(dateString) {
-            return new Date(dateString).toLocaleDateString();
-        }
+        const dataStr = JSON.stringify(currentResults, null, 2);
+        const dataBlob = new Blob([dataStr], { type: "application/json" });
+        const url = URL.createObjectURL(dataBlob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "incident_search_results.json";
+        link.click();
+        URL.revokeObjectURL(url);
+      }
 
-        function formatTime(dateString) {
-            return new Date(dateString).toLocaleTimeString();
-        }
+      function clearResults() {
+        document.getElementById("results-container").style.display = "none";
+        document.getElementById("search-query").value = "";
+        document.getElementById("filter-type").value = "";
+        document.getElementById("filter-priority").value = "";
+        document.getElementById("filter-date").value = "";
+        document.getElementById("filter-location").value = "";
+        currentResults = [];
+      }
 
-        function exportResults() {
-            if (currentResults.length === 0) {
-                alert('No results to export');
-                return;
-            }
-
-            const dataStr = JSON.stringify(currentResults, null, 2);
-            const dataBlob = new Blob([dataStr], {type: 'application/json'});
-            const url = URL.createObjectURL(dataBlob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = 'incident_search_results.json';
-            link.click();
-            URL.revokeObjectURL(url);
-        }
-
-        function clearResults() {
-            document.getElementById('results-container').style.display = 'none';
-            document.getElementById('search-query').value = '';
-            document.getElementById('filter-type').value = '';
-            document.getElementById('filter-priority').value = '';
-            document.getElementById('filter-date').value = '';
-            document.getElementById('filter-location').value = '';
-            currentResults = [];
-        }
-
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
+      function debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+          const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+          };
+          clearTimeout(timeout);
+          timeout = setTimeout(later, wait);
+        };
+      }
     </script>
-</body>
-</html> 
+  </body>
+</html>

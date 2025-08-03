@@ -66,16 +66,26 @@ A unified dashboard and orchestration platform that integrates both EIDO and IDX
    cd sentinel-eido-idx
    ```
 
-2. **Start the Sentinel AI dashboard:**
+2. **Start the complete SentinelAI platform:**
    ```bash
-   cd sentinelai
-   docker-compose up -d
+   # On Windows
+   run-system.bat
+   
+   # On Linux/Mac
+   ./run-system.sh
+   
+   # Or manually
+   docker-compose up --build -d
    ```
 
-3. **Access the dashboard:**
-   - Main dashboard: http://localhost:8501
-   - EIDO Agent: http://localhost:8502
-   - IDX Agent: http://localhost:8503
+3. **Access the platform:**
+   - **Landing Page**: http://localhost (Modern investor-ready homepage)
+   - **Main Dashboard**: http://localhost/dashboard
+   - **EIDO Agent UI**: http://localhost/eido-ui
+   - **IDX Agent UI**: http://localhost/idx-ui
+   - **API Documentation**: 
+     - EIDO API: http://localhost/api/eido/docs
+     - IDX API: http://localhost/api/idx/docs
 
 ### Individual Project Setup
 

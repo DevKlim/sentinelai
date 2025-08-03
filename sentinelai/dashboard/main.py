@@ -6,10 +6,14 @@ import httpx
 import json
 from datetime import datetime, timedelta
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from collections import defaultdict
 
 app = FastAPI(title="Sentinel AI Dashboard", version="1.0.0")
+
+@app.get("/health")
+async def health():
+    return {"status": "ok"}
 
 # Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -31,9 +35,11 @@ async def dashboard(request: Request):
 async def get_status():
     """Get status of all services"""
     services = {
-        "eido_api": {"url": f"{EIDO_API_URL}/", "name": "EIDO API"},
-        "idx_api": {"url": f"{IDX_API_URL}/health", "name": "IDX API"},
-        "main_api": {"url": f"{MAIN_API_URL}/", "name": "Main API"}
+        "eido_api": {"url": f"{EIDO_API_URL}/health", "name": "EIDO API", "type": "api"},
+        "idx_api": {"url": f"{IDX_API_URL}/health", "name": "IDX API", "type": "api"},
+        "main_api": {"url": f"{MAIN_API_URL}/health", "name": "Main API", "type": "api"},
+        "eido_ui": {"url": "http://eido_streamlit:8501", "name": "EIDO UI", "type": "ui"},
+        "idx_ui": {"url": "http://idx_ui:8502", "name": "IDX UI", "type": "ui"}
     }
     
     status = {}
@@ -41,9 +47,14 @@ async def get_status():
         for service_id, service in services.items():
             try:
                 response = await client.get(service["url"], timeout=5.0)
+                if service["type"] == "api":
+                    is_online = response.status_code == 200 and response.json().get("status") == "ok"
+                else:
+                    is_online = response.status_code == 200
+
                 status[service_id] = {
                     "name": service["name"],
-                    "status": "online" if response.status_code == 200 else "error",
+                    "status": "online" if is_online else "error",
                     "response_time": response.elapsed.total_seconds(),
                     "last_check": datetime.now().isoformat()
                 }
@@ -235,10 +246,27 @@ async def eido_submit_page(request: Request):
     """EIDO report submission page"""
     return templates.TemplateResponse("eido_submit.html", {"request": request})
 
-@app.get("/api/idx/search", response_class=HTMLResponse)
-async def idx_search_page(request: Request):
-    """IDX search page"""
-    return templates.TemplateResponse("idx_search.html", {"request": request})
+@app.get("/api/idx/search")
+async def handle_idx_search(request: Request, query: Optional[str] = None):
+    """Search incidents via IDX API or serve the search page."""
+    if query is not None:
+        # API call to search incidents
+        try:
+            async with httpx.AsyncClient() as client:
+                response = await client.get(
+                    f"{IDX_API_URL}/search",
+                    params={"query": query},
+                    timeout=10.0
+                )
+                return JSONResponse(
+                    status_code=response.status_code,
+                    content=response.json()
+                )
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Request for the HTML page
+        return templates.TemplateResponse("idx_search.html", {"request": request})
 
 @app.post("/api/eido/process")
 async def process_eido_report(request: Request):
@@ -258,23 +286,6 @@ async def process_eido_report(request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/api/idx/search")
-async def search_incidents(request: Request, query: str = ""):
-    """Search incidents through IDX API"""
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{IDX_API_URL}/search",
-                params={"query": query},
-                timeout=10.0
-            )
-            return JSONResponse(
-                status_code=response.status_code,
-                content=response.json()
-            )
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
-
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8080) 
+    uvicorn.run(app, host="0.0.0.0", port=8080)

@@ -1,486 +1,564 @@
-<!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Submit 911 Report - Sentinel AI</title>
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
 
-        body {
-            font-family: 'Inter', sans-serif;
-            background: #000000;
-            min-height: 100vh;
-            color: #ffffff;
-        }
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        min-height: 100vh;
+        color: #ffffff;
+      }
 
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            padding: 2rem;
-        }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+      }
 
-        .header {
-            text-align: center;
-            margin-bottom: 3rem;
-        }
+      .header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
 
-        .header h1 {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-            letter-spacing: 1px;
-        }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+      }
 
-        .header p {
-            color: #cccccc;
-            font-size: 1.1rem;
-            font-weight: 300;
-        }
+      .header p {
+        color: #cccccc;
+        font-size: 1.1rem;
+        font-weight: 300;
+      }
 
-        .form-container {
-            background: #111111;
-            border: 1px solid #333333;
-            border-radius: 12px;
-            padding: 3rem;
-            margin-bottom: 2rem;
-            position: relative;
-            overflow: hidden;
-        }
+      .form-container {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 3rem;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+      }
 
-        .form-container::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            border: 1px solid transparent;
-            border-radius: 12px;
-            transition: all 0.3s ease;
-            pointer-events: none;
-        }
+      .form-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
 
-        .form-container:hover::before {
-            border-color: #ffffff;
-        }
+      .form-container:hover::before {
+        border-color: #ffffff;
+      }
 
-        .form-section {
-            margin-bottom: 2rem;
-        }
+      .form-section {
+        margin-bottom: 2rem;
+      }
 
-        .section-title {
-            font-size: 1.3rem;
-            font-weight: 600;
-            color: #ffffff;
-            margin-bottom: 1rem;
-            display: flex;
-            align-items: center;
-        }
+      .section-title {
+        font-size: 1.3rem;
+        font-weight: 600;
+        color: #ffffff;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+      }
 
-        .section-title i {
-            margin-right: 0.5rem;
-        }
+      .section-title i {
+        margin-right: 0.5rem;
+      }
 
-        .form-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
+      .form-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+      }
 
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
 
-        .form-label {
-            display: block;
-            font-weight: 500;
-            color: #ffffff;
-            margin-bottom: 0.5rem;
-        }
+      .form-label {
+        display: block;
+        font-weight: 500;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+      }
 
-        .form-input, .form-select, .form-textarea {
-            width: 100%;
-            padding: 1rem;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-family: inherit;
-            transition: all 0.3s ease;
-            background: #1a1a1a;
-            color: #ffffff;
-        }
+      .form-input,
+      .form-select,
+      .form-textarea {
+        width: 100%;
+        padding: 1rem;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-family: inherit;
+        transition: all 0.3s ease;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
 
-        .form-input:focus, .form-select:focus, .form-textarea:focus {
-            outline: none;
-            border-color: #ffffff;
-            box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
-        }
+      .form-input:focus,
+      .form-select:focus,
+      .form-textarea:focus {
+        outline: none;
+        border-color: #ffffff;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+      }
 
-        .form-textarea {
-            min-height: 120px;
-            resize: vertical;
-        }
+      .form-textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
 
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+      }
+
+      .priority-high {
+        border-color: #ff4444;
+        background: rgba(255, 68, 68, 0.05);
+      }
+
+      .priority-medium {
+        border-color: #ffaa00;
+        background: rgba(255, 170, 0, 0.05);
+      }
+
+      .priority-low {
+        border-color: #ffffff;
+        background: rgba(255, 255, 255, 0.05);
+      }
+
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem 2rem;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        text-decoration: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-family: inherit;
+        background: #1a1a1a;
+        color: #ffffff;
+      }
+
+      .btn-primary {
+        background: #ffffff;
+        color: #000000;
+        border-color: #ffffff;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+      }
+
+      .btn-secondary {
+        background: #1a1a1a;
+        color: #ffffff;
+        border-color: #333333;
+      }
+
+      .btn-secondary:hover {
+        border-color: #ffffff;
+        background: #222222;
+      }
+
+      .btn i {
+        margin-right: 0.5rem;
+      }
+
+      .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+      }
+
+      .loading {
+        display: none;
+        text-align: center;
+        padding: 2rem;
+      }
+
+      .loading i {
+        font-size: 2rem;
+        color: #ffffff;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      .result {
+        display: none;
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid #ffffff;
+        border-radius: 8px;
+        padding: 2rem;
+        margin-top: 2rem;
+      }
+
+      .result h3 {
+        color: #ffffff;
+        margin-bottom: 1rem;
+      }
+
+      .result pre {
+        background: #1a1a1a;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.9rem;
+        border: 1px solid #333333;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 8px;
+      }
+
+      .back-link:hover {
+        border-color: #ffffff;
+        background: #1a1a1a;
+        transform: translateX(-5px);
+      }
+
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+
+      @media (max-width: 768px) {
         .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
-        }
-
-        .priority-high {
-            border-color: #ff4444;
-            background: rgba(255, 68, 68, 0.05);
-        }
-
-        .priority-medium {
-            border-color: #ffaa00;
-            background: rgba(255, 170, 0, 0.05);
-        }
-
-        .priority-low {
-            border-color: #ffffff;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: 1rem 2rem;
-            border: 1px solid #333333;
-            border-radius: 8px;
-            font-size: 1rem;
-            font-weight: 600;
-            text-decoration: none;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-family: inherit;
-            background: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .btn-primary {
-            background: #ffffff;
-            color: #000000;
-            border-color: #ffffff;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
-        }
-
-        .btn-secondary {
-            background: #1a1a1a;
-            color: #ffffff;
-            border-color: #333333;
-        }
-
-        .btn-secondary:hover {
-            border-color: #ffffff;
-            background: #222222;
-        }
-
-        .btn i {
-            margin-right: 0.5rem;
+          grid-template-columns: 1fr;
         }
 
         .form-actions {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            margin-top: 2rem;
+          flex-direction: column;
         }
 
-        .loading {
-            display: none;
-            text-align: center;
-            padding: 2rem;
+        .container {
+          padding: 1rem;
         }
 
-        .loading i {
-            font-size: 2rem;
-            color: #ffffff;
-            animation: spin 1s linear infinite;
+        .form-container {
+          padding: 2rem;
         }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        .result {
-            display: none;
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid #ffffff;
-            border-radius: 8px;
-            padding: 2rem;
-            margin-top: 2rem;
-        }
-
-        .result h3 {
-            color: #ffffff;
-            margin-bottom: 1rem;
-        }
-
-        .result pre {
-            background: #1a1a1a;
-            padding: 1rem;
-            border-radius: 8px;
-            overflow-x: auto;
-            font-size: 0.9rem;
-            border: 1px solid #333333;
-        }
-
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            color: #ffffff;
-            text-decoration: none;
-            font-weight: 500;
-            margin-bottom: 2rem;
-            transition: all 0.3s ease;
-            padding: 0.75rem 1.5rem;
-            background: #111111;
-            border: 1px solid #333333;
-            border-radius: 8px;
-        }
-
-        .back-link:hover {
-            border-color: #ffffff;
-            background: #1a1a1a;
-            transform: translateX(-5px);
-        }
-
-        .back-link i {
-            margin-right: 0.5rem;
-        }
-
-        @media (max-width: 768px) {
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .container {
-                padding: 1rem;
-            }
-            
-            .form-container {
-                padding: 2rem;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="container">
-        <a href="/" class="back-link">
-            <i class="fas fa-arrow-left"></i>
-            Back to Dashboard
-        </a>
+      <a href="/" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </a>
 
-        <div class="header">
-            <h1>🚨 Submit 911 Report</h1>
-            <p>Create a new emergency incident report with AI-powered processing</p>
+      <div class="header">
+        <h1>🚨 Submit 911 Report</h1>
+        <p>Create a new emergency incident report with AI-powered processing</p>
+      </div>
+
+      <div class="form-container">
+        <form id="eido-form">
+          <div class="form-section">
+            <div class="section-title">
+              <i class="fas fa-info-circle"></i>
+              Incident Information
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Incident Type *</label>
+                <select class="form-select" name="incident_type" required>
+                  <option value="">Select incident type</option>
+                  <option value="fire">Fire</option>
+                  <option value="medical">Medical Emergency</option>
+                  <option value="traffic">Traffic Accident</option>
+                  <option value="crime">Crime in Progress</option>
+                  <option value="natural_disaster">Natural Disaster</option>
+                  <option value="other">Other</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Priority Level *</label>
+                <select class="form-select" name="priority" required>
+                  <option value="">Select priority</option>
+                  <option value="high">
+                    High - Immediate Response Required
+                  </option>
+                  <option value="medium">
+                    Medium - Response Within 10 Minutes
+                  </option>
+                  <option value="low">Low - Non-Emergency</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-title">
+              <i class="fas fa-map-marker-alt"></i>
+              Location Details
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Address *</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  name="address"
+                  placeholder="Enter full address"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">City *</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  name="city"
+                  placeholder="Enter city"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">State *</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  name="state"
+                  placeholder="Enter state"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">ZIP Code</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  name="zip_code"
+                  placeholder="Enter ZIP code"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-title">
+              <i class="fas fa-user"></i>
+              Reporter Information
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Reporter Name</label>
+                <input
+                  type="text"
+                  class="form-input"
+                  name="reporter_name"
+                  placeholder="Enter your name"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Phone Number</label>
+                <input
+                  type="tel"
+                  class="form-input"
+                  name="phone"
+                  placeholder="Enter phone number"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-title">
+              <i class="fas fa-file-alt"></i>
+              Incident Description
+            </div>
+            <div class="form-group">
+              <label class="form-label">Detailed Description *</label>
+              <textarea
+                class="form-textarea"
+                name="description"
+                placeholder="Provide a detailed description of the incident, including what happened, when it occurred, and any relevant details..."
+                required
+              ></textarea>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="section-title">
+              <i class="fas fa-exclamation-triangle"></i>
+              Additional Details
+            </div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Number of People Involved</label>
+                <input
+                  type="number"
+                  class="form-input"
+                  name="people_involved"
+                  placeholder="Enter number"
+                  min="0"
+                />
+              </div>
+              <div class="form-group">
+                <label class="form-label">Injuries Reported</label>
+                <select class="form-select" name="injuries">
+                  <option value="">Select option</option>
+                  <option value="none">No injuries</option>
+                  <option value="minor">Minor injuries</option>
+                  <option value="serious">Serious injuries</option>
+                  <option value="unknown">Unknown</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              onclick="window.location.href='/'"
+            >
+              <i class="fas fa-times"></i>
+              Cancel
+            </button>
+            <button type="submit" class="btn btn-primary">
+              <i class="fas fa-paper-plane"></i>
+              Submit Report
+            </button>
+          </div>
+        </form>
+
+        <div class="loading" id="loading">
+          <i class="fas fa-spinner"></i>
+          <p>Processing your report with AI...</p>
         </div>
 
-        <div class="form-container">
-            <form id="eido-form">
-                <div class="form-section">
-                    <div class="section-title">
-                        <i class="fas fa-info-circle"></i>
-                        Incident Information
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Incident Type *</label>
-                            <select class="form-select" name="incident_type" required>
-                                <option value="">Select incident type</option>
-                                <option value="fire">Fire</option>
-                                <option value="medical">Medical Emergency</option>
-                                <option value="traffic">Traffic Accident</option>
-                                <option value="crime">Crime in Progress</option>
-                                <option value="natural_disaster">Natural Disaster</option>
-                                <option value="other">Other</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Priority Level *</label>
-                            <select class="form-select" name="priority" required>
-                                <option value="">Select priority</option>
-                                <option value="high">High - Immediate Response Required</option>
-                                <option value="medium">Medium - Response Within 10 Minutes</option>
-                                <option value="low">Low - Non-Emergency</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="section-title">
-                        <i class="fas fa-map-marker-alt"></i>
-                        Location Details
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Address *</label>
-                            <input type="text" class="form-input" name="address" placeholder="Enter full address" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">City *</label>
-                            <input type="text" class="form-input" name="city" placeholder="Enter city" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">State *</label>
-                            <input type="text" class="form-input" name="state" placeholder="Enter state" required>
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">ZIP Code</label>
-                            <input type="text" class="form-input" name="zip_code" placeholder="Enter ZIP code">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="section-title">
-                        <i class="fas fa-user"></i>
-                        Reporter Information
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Reporter Name</label>
-                            <input type="text" class="form-input" name="reporter_name" placeholder="Enter your name">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Phone Number</label>
-                            <input type="tel" class="form-input" name="phone" placeholder="Enter phone number">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="section-title">
-                        <i class="fas fa-file-alt"></i>
-                        Incident Description
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Detailed Description *</label>
-                        <textarea class="form-textarea" name="description" placeholder="Provide a detailed description of the incident, including what happened, when it occurred, and any relevant details..." required></textarea>
-                    </div>
-                </div>
-
-                <div class="form-section">
-                    <div class="section-title">
-                        <i class="fas fa-exclamation-triangle"></i>
-                        Additional Details
-                    </div>
-                    <div class="form-grid">
-                        <div class="form-group">
-                            <label class="form-label">Number of People Involved</label>
-                            <input type="number" class="form-input" name="people_involved" placeholder="Enter number" min="0">
-                        </div>
-                        <div class="form-group">
-                            <label class="form-label">Injuries Reported</label>
-                            <select class="form-select" name="injuries">
-                                <option value="">Select option</option>
-                                <option value="none">No injuries</option>
-                                <option value="minor">Minor injuries</option>
-                                <option value="serious">Serious injuries</option>
-                                <option value="unknown">Unknown</option>
-                            </select>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="window.location.href='/'">
-                        <i class="fas fa-times"></i>
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-paper-plane"></i>
-                        Submit Report
-                    </button>
-                </div>
-            </form>
-
-            <div class="loading" id="loading">
-                <i class="fas fa-spinner"></i>
-                <p>Processing your report with AI...</p>
-            </div>
-
-            <div class="result" id="result">
-                <h3>✅ Report Processed Successfully!</h3>
-                <p>Your 911 report has been processed and converted to EIDO format:</p>
-                <pre id="result-json"></pre>
-            </div>
+        <div class="result" id="result">
+          <h3>✅ Report Processed Successfully!</h3>
+          <p>
+            Your 911 report has been processed and converted to EIDO format:
+          </p>
+          <pre id="result-json"></pre>
         </div>
+      </div>
     </div>
 
     <script>
-        document.getElementById('eido-form').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const form = e.target;
-            const formData = new FormData(form);
-            const data = Object.fromEntries(formData.entries());
-            
-            // Show loading
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
-            
-            try {
-                const response = await fetch('/api/eido/process', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify(data)
-                });
-                
-                const result = await response.json();
-                
-                // Hide loading
-                document.getElementById('loading').style.display = 'none';
-                
-                // Show result
-                document.getElementById('result').style.display = 'block';
-                document.getElementById('result-json').textContent = JSON.stringify(result, null, 2);
-                
-                // Scroll to result
-                document.getElementById('result').scrollIntoView({ behavior: 'smooth' });
-                
-            } catch (error) {
-                console.error('Error:', error);
-                document.getElementById('loading').style.display = 'none';
-                alert('Error processing report. Please try again.');
-            }
+      document
+        .getElementById("eido-form")
+        .addEventListener("submit", async function (e) {
+          e.preventDefault();
+
+          const form = e.target;
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData.entries());
+
+          // Show loading
+          document.getElementById("loading").style.display = "block";
+          document.getElementById("result").style.display = "none";
+
+          try {
+            const response = await fetch("process", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(data),
+            });
+
+            const result = await response.json();
+
+            // Hide loading
+            document.getElementById("loading").style.display = "none";
+
+            // Show result
+            document.getElementById("result").style.display = "block";
+            document.getElementById("result-json").textContent = JSON.stringify(
+              result,
+              null,
+              2
+            );
+
+            // Scroll to result
+            document
+              .getElementById("result")
+              .scrollIntoView({ behavior: "smooth" });
+          } catch (error) {
+            console.error("Error:", error);
+            document.getElementById("loading").style.display = "none";
+            alert("Error processing report. Please try again.");
+          }
         });
 
-        // Priority styling
-        document.querySelector('select[name="priority"]').addEventListener('change', function(e) {
-            const description = document.querySelector('textarea[name="description"]');
-            description.className = 'form-textarea';
-            
-            if (e.target.value === 'high') {
-                description.classList.add('priority-high');
-            } else if (e.target.value === 'medium') {
-                description.classList.add('priority-medium');
-            } else if (e.target.value === 'low') {
-                description.classList.add('priority-low');
-            }
+      // Priority styling
+      document
+        .querySelector('select[name="priority"]')
+        .addEventListener("change", function (e) {
+          const description = document.querySelector(
+            'textarea[name="description"]'
+          );
+          description.className = "form-textarea";
+
+          if (e.target.value === "high") {
+            description.classList.add("priority-high");
+          } else if (e.target.value === "medium") {
+            description.classList.add("priority-medium");
+          } else if (e.target.value === "low") {
+            description.classList.add("priority-low");
+          }
         });
     </script>
-</body>
-</html> 
+  </body>
+</html>
