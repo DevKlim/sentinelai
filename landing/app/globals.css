@@ -1,0 +1,88 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 40% 5%; /* Dark Navy Blue */
+    --foreground: 0 0% 100%; /* White */
+
+    --card: 220 30% 10%;
+    --card-foreground: 0 0% 98%;
+    --popover: 220 40% 5%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 210 100% 50%; /* Bright Blue */
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 30% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 20% 30%;
+    --muted-foreground: 220 10% 65%;
+
+    --accent: 220 30% 15%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 220 30% 20%;
+    --input: 220 30% 15%;
+    --ring: 210 100% 50%;
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-image: radial-gradient(
+      circle at top,
+      hsl(220 30% 12%) 0%,
+      hsl(var(--background)) 35%
+    );
+  }
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+  }
+  .text-shadow-lg {
+    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-black/30 backdrop-blur-md;
+    border: 1px solid;
+    @apply border-white/10;
+  }
+
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+  }
+
+  .text-glow {
+    text-shadow: 0 0 8px rgba(255, 255, 255, 0.8), 0 0 20px rgba(255, 255, 255, 0.5);
+  }
+
+  @keyframes marquee {
+    0% { transform: translateX(100%); }
+    100% { transform: translateX(-100%); }
+  }
+
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+}

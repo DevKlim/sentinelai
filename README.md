@@ -51,6 +51,15 @@ A unified dashboard and orchestration platform that integrates both EIDO and IDX
 - Nginx for load balancing
 - Multi-container architecture
 
+## Container Merging Strategy
+
+To improve build times and deployment efficiency, we've implemented a container merging strategy:
+
+1. **EIDO-IDX Merged Container**: Combines EIDO and IDX agents which share many common dependencies
+2. **SentinelAI Services Merged Container**: Combines the SentinelAI API and Dashboard services
+
+See `CONTAINER_MERGING.md` for detailed information on the implementation and benefits.
+
 ## Quick Start
 
 ### Prerequisites
@@ -141,6 +150,9 @@ sentinel-eido-idx/
 ├── eido-agent/          # Emergency incident processing
 ├── idx-agent/           # Document indexing and search
 ├── sentinelai/          # Unified dashboard
+├── eido-idx-merged/     # Merged EIDO-IDX container
+├── sentinelai-merged/   # Merged SentinelAI services container
+├── CONTAINER_MERGING.md # Documentation on container merging strategy
 └── README.md           # This file
 ```
 

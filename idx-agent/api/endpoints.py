@@ -1,18 +1,39 @@
-
 from fastapi import APIRouter, HTTPException, Body, UploadFile, File
 from fastapi.openapi.utils import get_openapi
 import httpx
 import json
+from dotenv import set_key
 
 from models.schemas import Incident, CorrelationRequest, CorrelationResponse
 from config.settings import settings
 
-router = APIRouter(prefix="/api/v1", tags=["Incidents", "EIDO"])
+router = APIRouter(prefix="/api/v1", tags=["Incidents", "EIDO", "Settings"])
 
 EIDO_AGENT_URL = settings.eido_agent_url
 
 # Store "claimed" incidents in memory for simplicity
 claimed_incidents = set()
+
+@router.post("/settings/env")
+async def update_env_settings(new_settings: dict):
+    """
+    Update the .env file with new settings and restart the categorizer.
+    """
+    try:
+        for key, value in new_settings.items():
+            set_key(".env", key, value)
+        # This is a simple way to restart the categorizer.
+        # In a production environment, you'd want a more robust mechanism.
+        # For example, you could have a separate process manager for the categorizer.
+        # For now, we'll just signal the main process to restart it.
+        # This is a simplified example and might not work in all deployment scenarios.
+        # A more robust solution would involve inter-process communication or a process manager.
+        # We will add a file that the main process can check to see if it needs to restart the categorizer.
+        with open("restart_categorizer.flag", "w") as f:
+            f.write("restart")
+        return {"message": "Settings updated successfully. Categorizer will restart."}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to update settings: {e}")
 
 @router.get("/openapi.json", include_in_schema=False)
 async def get_open_api_endpoint():
@@ -93,44 +114,19 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 # In-memory store for incident embeddings
 incident_embeddings = {}
 
-@router.post("/incidents/{incident_id}/correlate", response_model=list[Incident])
-async def correlate_incident_endpoint(incident_id: str):
+@router.post("/incidents/{incident_id}/close")
+async def close_incident(incident_id: str):
     """
-    Correlate an incident with existing incidents based on semantic similarity.
+    Close an incident in the EIDO Agent.
     """
     try:
         async with httpx.AsyncClient() as client:
-            # Get all incidents from the EIDO agent
-            response = await client.get(f"{EIDO_AGENT_URL}/api/v1/incidents")
+            response = await client.post(f"{EIDO_AGENT_URL}/api/v1/incidents/{incident_id}/close")
             response.raise_for_status()
-            incidents = response.json()
-
-            # Find the target incident
-            target_incident = next((inc for inc in incidents if inc['incident_id'] == incident_id), None)
-            if not target_incident:
-                raise HTTPException(status_code=404, detail="Target incident not found")
-
-            # Generate embeddings for all incident names
-            for inc in incidents:
-                if inc['incident_id'] not in incident_embeddings:
-                    incident_embeddings[inc['incident_id']] = model.encode(inc['name'])
-
-            target_embedding = incident_embeddings[incident_id]
-
-            # Calculate similarities and find correlated incidents
-            correlated_incidents = []
-            for inc in incidents:
-                if inc['incident_id'] != incident_id:
-                    similarity = util.cos_sim(target_embedding, incident_embeddings[inc['incident_id']])
-                    if similarity > 0.8: # Similarity threshold
-                        correlated_incidents.append(inc)
-            
-            return correlated_incidents
-
+            return response.json()
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except httpx.RequestError as e:
         raise HTTPException(status_code=502, detail=f"Error connecting to EIDO Agent: {e}")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during correlation: {e}")
-
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while closing the incident: {e}")

@@ -6,15 +6,13 @@ import streamlit_authenticator as stauth
 def get_authenticator():
     # In a real app, you'd load this from a secure source
     users = {
-        "usernames": {
-            "admin": {
-                "name": "Admin User",
-                "password": "password123", # In a real app, use hashed passwords
-            }
+        "admin": {
+            "name": "Admin User",
+            "password": "password123", # In a real app, use hashed passwords
         }
     }
     return stauth.Authenticate(
-        users["usernames"],
+        users,
         "some_cookie_name",
         "some_signature_key",
         cookie_expiry_days=30,

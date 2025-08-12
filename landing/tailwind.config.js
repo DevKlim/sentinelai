@@ -1,9 +1,13 @@
 /** @type {import('tailwindcss').Config} */
-import animatePlugin from "tailwindcss-animate";
+const animatePlugin = require("tailwindcss-animate");
 
-export default {
+module.exports = {
   darkMode: ["class"],
-  content: ["./index.html", "./src/**/*.{js,ts,jsx,tsx}"],
+  content: [
+    "./pages/**/*.{js,ts,jsx,tsx,mdx}",
+    "./components/**/*.{js,ts,jsx,tsx,mdx}",
+    "./app/**/*.{js,ts,jsx,tsx,mdx}",
+  ],
   theme: {
     container: {
       center: true,
@@ -14,7 +18,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Geist", "sans-serif"],
+        sans: ["var(--font-inter)", "sans-serif"],
+        unna: ["var(--font-unna)", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",

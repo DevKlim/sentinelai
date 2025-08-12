@@ -1,0 +1,1112 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentinel AI - Emergency Response Dashboard</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        color: #ffffff;
+        min-height: 100vh;
+        line-height: 1.6;
+      }
+
+      .dashboard {
+        display: flex;
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        width: 280px;
+        background: #111111;
+        border-right: 1px solid #333333;
+        padding: 2rem 0;
+        position: fixed;
+        height: 100vh;
+        overflow-y: auto;
+      }
+
+      .main-content {
+        flex: 1;
+        margin-left: 280px;
+        padding: 2rem;
+      }
+
+      .logo {
+        text-align: center;
+        margin-bottom: 2rem;
+        padding: 0 2rem;
+      }
+
+      .logo h1 {
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+      }
+
+      .logo p {
+        color: #cccccc;
+        font-size: 0.9rem;
+        font-weight: 300;
+      }
+
+      .nav-menu {
+        list-style: none;
+        padding: 0 1rem;
+      }
+
+      .nav-item {
+        margin-bottom: 0.5rem;
+      }
+
+      .nav-link {
+        display: flex;
+        align-items: center;
+        padding: 1rem 1.5rem;
+        color: #cccccc;
+        text-decoration: none;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        border: 1px solid transparent;
+      }
+
+      .nav-link:hover,
+      .nav-link.active {
+        background: #1a1a1a;
+        color: #ffffff;
+        border: 1px solid #ffffff;
+        transform: translateX(5px);
+      }
+
+      .nav-link i {
+        margin-right: 12px;
+        width: 20px;
+        text-align: center;
+        color: #ffffff;
+      }
+
+      .status-indicator {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #ffffff;
+        margin-left: auto;
+        animation: pulse 2s infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      .header {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .header h2 {
+        font-size: 2rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+        letter-spacing: 1px;
+      }
+
+      .header p {
+        color: #cccccc;
+        font-size: 1.1rem;
+        font-weight: 300;
+      }
+
+      .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .stat-card {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .stat-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
+
+      .stat-card:hover::before {
+        border-color: #ffffff;
+        transform: scale(1.02);
+      }
+
+      .stat-card:hover {
+        background: #1a1a1a;
+        transform: translateY(-2px);
+      }
+
+      .stat-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 1rem;
+        font-size: 1.5rem;
+        color: #000000;
+        background: #ffffff;
+      }
+
+      .stat-title {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.1rem;
+      }
+
+      .stat-value {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+      }
+
+      .stat-change {
+        font-size: 0.9rem;
+        color: #ffffff;
+        font-weight: 500;
+      }
+
+      .stat-change.negative {
+        color: #cccccc;
+      }
+
+      .interface-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .interface-card {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        cursor: pointer;
+        text-decoration: none;
+        color: inherit;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .interface-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        border: 1px solid transparent;
+        border-radius: 12px;
+        transition: all 0.3s ease;
+        pointer-events: none;
+      }
+
+      .interface-card:hover::before {
+        border-color: #ffffff;
+        transform: scale(1.02);
+      }
+
+      .interface-card:hover {
+        background: #1a1a1a;
+        transform: translateY(-5px);
+      }
+
+      .interface-icon {
+        width: 80px;
+        height: 80px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 auto 1rem;
+        font-size: 2rem;
+        color: #000000;
+        background: #ffffff;
+      }
+
+      .interface-title {
+        font-weight: 600;
+        color: #ffffff;
+        font-size: 1.2rem;
+        margin-bottom: 0.5rem;
+      }
+
+      .interface-description {
+        color: #cccccc;
+        font-size: 0.9rem;
+        line-height: 1.5;
+        font-weight: 300;
+      }
+
+      .analytics-section {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+
+      .section-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+      }
+
+      .section-title {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .refresh-btn {
+        background: #333333;
+        border: none;
+        color: #ffffff;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-size: 0.9rem;
+      }
+
+      .refresh-btn:hover {
+        background: #444444;
+      }
+
+      .chart-container {
+        position: relative;
+        height: 400px;
+        margin-bottom: 2rem;
+      }
+
+      .map-container {
+        height: 500px;
+        border-radius: 8px;
+        overflow: hidden;
+      }
+
+      .incident-list {
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .incident-item {
+        background: #1a1a1a;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: block;
+        color: inherit;
+      }
+
+      .incident-item:hover {
+        background: #222222;
+        border-color: #ffffff;
+      }
+
+      .incident-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+      }
+
+      .incident-type {
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .incident-status {
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        font-weight: 500;
+      }
+
+      .status-open {
+        background: #ffffff;
+        color: #000000;
+      }
+
+      .status-closed {
+        background: #cccccc;
+        color: #000000;
+      }
+
+      .incident-details {
+        color: #cccccc;
+        font-size: 0.9rem;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 2rem;
+        color: #cccccc;
+      }
+
+      .error {
+        background: #ffffff;
+        color: #000000;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+
+      .success {
+        background: #ffffff;
+        color: #000000;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+      }
+
+      @media (max-width: 1024px) {
+        .sidebar {
+          width: 240px;
+        }
+        .main-content {
+          margin-left: 240px;
+        }
+        .stats-grid,
+        .interface-grid {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+
+      @media (max-width: 768px) {
+        .sidebar {
+          width: 100%;
+          position: relative;
+          height: auto;
+        }
+        .main-content {
+          margin-left: 0;
+        }
+        .stats-grid,
+        .interface-grid {
+          grid-template-columns: 1fr;
+        }
+        .dashboard {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="dashboard">
+      <nav class="sidebar">
+        <div class="logo">
+          <h1>Sentinel AI</h1>
+          <p>Emergency Response Dashboard</p>
+        </div>
+        <ul class="nav-menu">
+          <li class="nav-item">
+            <a
+              href="#"
+              class="nav-link active"
+              onclick="showSection('overview', event)"
+            >
+              <i class="fas fa-tachometer-alt"></i>
+              Overview
+              <div class="status-indicator"></div>
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('interfaces', event)"
+            >
+              <i class="fas fa-desktop"></i>
+              Interfaces
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('analytics', event)"
+            >
+              <i class="fas fa-chart-line"></i>
+              Analytics
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="#" class="nav-link" onclick="showSection('map', event)">
+              <i class="fas fa-map-marked-alt"></i>
+              Geographic View
+            </a>
+          </li>
+          <li class="nav-item">
+            <a
+              href="#"
+              class="nav-link"
+              onclick="showSection('incidents', event)"
+            >
+              <i class="fas fa-exclamation-triangle"></i>
+              Incidents
+            </a>
+          </li>
+        </ul>
+      </nav>
+
+      <main class="main-content">
+        <!-- Overview Section -->
+        <section id="overview" class="dashboard-section">
+          <div class="header">
+            <h2>Emergency Response Overview</h2>
+            <p>Real-time monitoring of emergency incidents and system status</p>
+          </div>
+
+          <div class="stats-grid" id="stats-grid">
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <div class="stat-title">Total Incidents</div>
+              </div>
+              <div class="stat-value" id="total-incidents">-</div>
+              <div class="stat-change" id="incidents-change">Loading...</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <i class="fas fa-fire"></i>
+                </div>
+                <div class="stat-title">Open Incidents</div>
+              </div>
+              <div class="stat-value" id="active-incidents">-</div>
+              <div class="stat-change" id="active-change">Loading...</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <i class="fas fa-clock"></i>
+                </div>
+                <div class="stat-title">Avg Response Time</div>
+              </div>
+              <div class="stat-value" id="avg-response">-</div>
+              <div class="stat-change" id="response-change">Loading...</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <div class="stat-icon">
+                  <i class="fas fa-check-circle"></i>
+                </div>
+                <div class="stat-title">System Status</div>
+              </div>
+              <div class="stat-value" id="system-status">-</div>
+              <div class="stat-change" id="status-change">Loading...</div>
+            </div>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Service Status</h3>
+              <button class="refresh-btn" onclick="checkServices()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div id="service-status" class="loading">
+              Checking service status...
+            </div>
+          </div>
+        </section>
+
+        <!-- Interfaces Section -->
+        <section
+          id="interfaces"
+          class="dashboard-section"
+          style="display: none"
+        >
+          <div class="header">
+            <h2>System Interfaces</h2>
+            <p>Access all emergency response system interfaces</p>
+          </div>
+
+          <div class="interface-grid">
+            <a href="/dashboard/eido/submit" class="interface-card">
+              <div class="interface-icon">
+                <i class="fas fa-plus-circle"></i>
+              </div>
+              <div class="interface-title">Submit New Report</div>
+              <div class="interface-description">
+                Upload raw text, audio, or EIDO JSON to create a new incident
+                report.
+              </div>
+            </a>
+
+            <a href="/dashboard/idx/search" class="interface-card">
+              <div class="interface-icon">
+                <i class="fas fa-database"></i>
+              </div>
+              <div class="interface-title">Search Incidents</div>
+              <div class="interface-description">
+                Advanced search and filtering for all incident data in the
+                system.
+              </div>
+            </a>
+
+            <a
+              href="http://localhost:8000/docs"
+              target="_blank"
+              class="interface-card"
+            >
+              <div class="interface-icon">
+                <i class="fas fa-server"></i>
+              </div>
+              <div class="interface-title">EIDO Agent API</div>
+              <div class="interface-description">
+                EIDO agent API documentation and endpoints (Swagger UI).
+              </div>
+            </a>
+
+            <a
+              href="http://localhost:8001/api/v1/openapi.json"
+              target="_blank"
+              class="interface-card"
+            >
+              <div class="interface-icon">
+                <i class="fas fa-cogs"></i>
+              </div>
+              <div class="interface-title">IDX Agent API</div>
+              <div class="interface-description">
+                IDX agent API documentation and endpoints.
+              </div>
+            </a>
+          </div>
+        </section>
+
+        <!-- Analytics Section -->
+        <section id="analytics" class="dashboard-section" style="display: none">
+          <div class="header">
+            <h2>Incident Analytics</h2>
+            <p>Comprehensive analysis of emergency response data</p>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Incident Trends (Last 30 Days)</h3>
+              <button class="refresh-btn" onclick="loadTrends()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div class="chart-container">
+              <canvas id="trends-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Incident Type Distribution</h3>
+              <button class="refresh-btn" onclick="loadAnalytics()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div class="chart-container">
+              <canvas id="type-chart"></canvas>
+            </div>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Response Time Analytics</h3>
+              <button class="refresh-btn" onclick="loadResponseTimes()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div id="response-analytics" class="loading">
+              Loading response time data...
+            </div>
+          </div>
+        </section>
+
+        <!-- Map Section -->
+        <section id="map" class="dashboard-section" style="display: none">
+          <div class="header">
+            <h2>Geographic Incident Distribution</h2>
+            <p>Real-time map view of emergency incidents</p>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Incident Locations</h3>
+              <button class="refresh-btn" onclick="loadMap()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div id="map-container" class="map-container"></div>
+          </div>
+        </section>
+
+        <!-- Incidents Section -->
+        <section id="incidents" class="dashboard-section" style="display: none">
+          <div class="header">
+            <h2>Incidents</h2>
+            <p>Current and past emergency situations</p>
+          </div>
+
+          <div class="analytics-section">
+            <div class="section-header">
+              <h3 class="section-title">Recent Incidents</h3>
+              <button class="refresh-btn" onclick="loadIncidents()">
+                <i class="fas fa-sync-alt"></i> Refresh
+              </button>
+            </div>
+            <div id="incidents-list" class="incident-list loading">
+              Loading incidents...
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      let map = null;
+      let trendsChart = null;
+      let typeChart = null;
+
+      // Initialize dashboard
+      document.addEventListener("DOMContentLoaded", function () {
+        loadOverview();
+        checkServices();
+      });
+
+      function showSection(sectionId, event) {
+        // Hide all sections
+        document.querySelectorAll(".dashboard-section").forEach((section) => {
+          section.style.display = "none";
+        });
+
+        // Show selected section
+        document.getElementById(sectionId).style.display = "block";
+
+        // Update navigation
+        document.querySelectorAll(".nav-link").forEach((link) => {
+          link.classList.remove("active");
+        });
+        event.currentTarget.classList.add("active");
+
+        // Load section-specific data
+        switch (sectionId) {
+          case "analytics":
+            loadTrends();
+            loadAnalytics();
+            loadResponseTimes();
+            break;
+          case "map":
+            loadMap();
+            break;
+          case "incidents":
+            loadIncidents();
+            break;
+        }
+      }
+
+      async function loadOverview() {
+        try {
+          const response = await fetch("/dashboard/api/analytics/incidents");
+          const data = await response.json();
+
+          document.getElementById("total-incidents").textContent =
+            data.total_incidents;
+          document.getElementById("active-incidents").textContent =
+            data.active_incidents;
+          document.getElementById(
+            "incidents-change"
+          ).textContent = `${data.incidents_24h} in last 24h`;
+
+          // Load response times
+          const responseData = await fetch(
+            "/dashboard/api/analytics/response-times"
+          );
+          const responseTimes = await responseData.json();
+
+          document.getElementById(
+            "avg-response"
+          ).textContent = `${responseTimes.average_response_time_minutes}m`;
+          document.getElementById(
+            "response-change"
+          ).textContent = `${responseTimes.total_incidents_analyzed} incidents analyzed`;
+        } catch (error) {
+          console.error("Error loading overview:", error);
+        }
+      }
+
+      async function checkServices() {
+        const statusDiv = document.getElementById("service-status");
+        statusDiv.innerHTML = '<div class="loading">Checking services...</div>';
+
+        try {
+          const response = await fetch("/dashboard/api/status");
+          const services = await response.json();
+
+          let statusHtml = "";
+          let allOnline = true;
+
+          for (const [serviceId, service] of Object.entries(services)) {
+            const isOnline = service.status === "online";
+            if (!isOnline) allOnline = false;
+
+            statusHtml += `
+                        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: ${
+                          isOnline ? "#1a1a1a" : "#ffffff"
+                        }; border-radius: 8px; margin-bottom: 1rem;">
+                            <div>
+                                <strong style="color: ${
+                                  isOnline ? "#ffffff" : "#000000"
+                                }">${service.name}</strong>
+                                <div style="color: ${
+                                  isOnline ? "#cccccc" : "#666666"
+                                }; font-size: 0.9rem;">Response: ${
+              service.response_time
+                ? service.response_time.toFixed(3) + "s"
+                : "N/A"
+            }</div>
+                            </div>
+                            <div style="color: ${
+                              isOnline ? "#ffffff" : "#000000"
+                            }">
+                                <i class="fas fa-${
+                                  isOnline ? "check-circle" : "times-circle"
+                                }"></i>
+                                ${service.status.toUpperCase()}
+                            </div>
+                        </div>
+                    `;
+          }
+
+          statusDiv.innerHTML = statusHtml;
+
+          // Update system status
+          document.getElementById("system-status").textContent = allOnline
+            ? "All Online"
+            : "Issues Detected";
+          document.getElementById("status-change").textContent = allOnline
+            ? "All services operational"
+            : "Some services offline";
+          document.getElementById("status-change").className = allOnline
+            ? "stat-change"
+            : "stat-change negative";
+        } catch (error) {
+          statusDiv.innerHTML =
+            '<div class="error">Error checking services: ' +
+            error.message +
+            "</div>";
+        }
+      }
+
+      async function loadTrends() {
+        try {
+          const response = await fetch("/dashboard/api/analytics/trends");
+          const data = await response.json();
+
+          if (trendsChart) {
+            trendsChart.destroy();
+          }
+
+          const ctx = document.getElementById("trends-chart").getContext("2d");
+          trendsChart = new Chart(ctx, {
+            type: "line",
+            data: {
+              labels: data.daily_counts.dates,
+              datasets: [
+                {
+                  label: "Daily Incidents",
+                  data: data.daily_counts.counts,
+                  borderColor: "#ffffff",
+                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  tension: 0.4,
+                  fill: true,
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  labels: {
+                    color: "#ffffff",
+                  },
+                },
+              },
+              scales: {
+                x: {
+                  ticks: {
+                    color: "#ffffff",
+                  },
+                  grid: {
+                    color: "#333333",
+                  },
+                },
+                y: {
+                  ticks: {
+                    color: "#ffffff",
+                  },
+                  grid: {
+                    color: "#333333",
+                  },
+                },
+              },
+            },
+          });
+        } catch (error) {
+          console.error("Error loading trends:", error);
+        }
+      }
+
+      async function loadAnalytics() {
+        try {
+          const response = await fetch("/dashboard/api/analytics/incidents");
+          const data = await response.json();
+
+          if (typeChart) {
+            typeChart.destroy();
+          }
+
+          const ctx = document.getElementById("type-chart").getContext("2d");
+          const labels = Object.keys(data.type_distribution);
+          const values = Object.values(data.type_distribution);
+
+          typeChart = new Chart(ctx, {
+            type: "doughnut",
+            data: {
+              labels: labels,
+              datasets: [
+                {
+                  data: values,
+                  backgroundColor: [
+                    "#ffffff",
+                    "#cccccc",
+                    "#999999",
+                    "#666666",
+                    "#333333",
+                    "#000000",
+                    "#e6e6e6",
+                    "#b3b3b3",
+                  ],
+                },
+              ],
+            },
+            options: {
+              responsive: true,
+              maintainAspectRatio: false,
+              plugins: {
+                legend: {
+                  position: "right",
+                  labels: {
+                    color: "#ffffff",
+                  },
+                },
+              },
+            },
+          });
+        } catch (error) {
+          console.error("Error loading analytics:", error);
+        }
+      }
+
+      async function loadResponseTimes() {
+        try {
+          const response = await fetch(
+            "/dashboard/api/analytics/response-times"
+          );
+          const data = await response.json();
+
+          const container = document.getElementById("response-analytics");
+          container.innerHTML = `
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
+                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.average_response_time_minutes}</div>
+                            <div style="color: #cccccc;">Average (minutes)</div>
+                        </div>
+                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.min_response_time_minutes}</div>
+                            <div style="color: #cccccc;">Fastest (minutes)</div>
+                        </div>
+                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.max_response_time_minutes}</div>
+                            <div style="color: #cccccc;">Slowest (minutes)</div>
+                        </div>
+                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.total_incidents_analyzed}</div>
+                            <div style="color: #cccccc;">Total Analyzed</div>
+                        </div>
+                    </div>
+                `;
+        } catch (error) {
+          console.error("Error loading response times:", error);
+        }
+      }
+
+      async function loadMap() {
+        try {
+          const response = await fetch("/dashboard/api/analytics/incidents");
+          const data = await response.json();
+
+          const container = document.getElementById("map-container");
+
+          if (!map) {
+            map = L.map(container).setView([32.7157, -117.1611], 10); // Default to San Diego
+
+            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+              attribution: "© OpenStreetMap contributors",
+            }).addTo(map);
+          } else {
+            map.eachLayer((layer) => {
+              if (layer instanceof L.Marker) {
+                map.removeLayer(layer);
+              }
+            });
+          }
+
+          // Add incident markers
+          (data.incidents || []).forEach((incident) => {
+            (incident.locations || []).forEach((location) => {
+              if (Array.isArray(location) && location.length === 2) {
+                const marker = L.marker([location[0], location[1]]).addTo(map)
+                  .bindPopup(`
+                                  <strong>${incident.name || "N/A"}</strong><br>
+                                  Type: ${incident.incident_type || "N/A"}<br>
+                                  Status: ${incident.status || "N/A"}
+                              `);
+              }
+            });
+          });
+        } catch (error) {
+          console.error("Error loading map:", error);
+        }
+      }
+
+      async function loadIncidents() {
+        try {
+          const response = await fetch("/dashboard/api/analytics/incidents");
+          const data = await response.json();
+
+          const container = document.getElementById("incidents-list");
+
+          if (!data.incidents || data.incidents.length === 0) {
+            container.innerHTML =
+              '<div class="loading">No incidents found</div>';
+            return;
+          }
+
+          let incidentsHtml = "";
+          data.incidents.forEach((incident) => {
+            const status = (incident.status || "unknown").toLowerCase();
+            const statusClass =
+              status === "open" ? "status-open" : "status-closed";
+            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
+
+            incidentsHtml += `
+                        <a href="/dashboard/incident/${
+                          incident.incident_id
+                        }" class="incident-item">
+                            <div class="incident-header">
+                                <span class="incident-type">${
+                                  incident.name || "Unnamed Incident"
+                                }</span>
+                                <span class="incident-status ${statusClass}">${statusText}</span>
+                            </div>
+                            <div class="incident-details">
+                                Type: ${incident.incident_type || "N/A"}<br>
+                                EIDO Reports: ${incident.report_count || 0}
+                            </div>
+                        </a>
+                    `;
+          });
+
+          container.innerHTML = incidentsHtml;
+        } catch (error) {
+          console.error("Error loading incidents:", error);
+          document.getElementById("incidents-list").innerHTML =
+            '<div class="error">Failed to load incidents.</div>';
+        }
+      }
+
+      // Auto-refresh every 30 seconds
+      setInterval(() => {
+        if (document.getElementById("overview").style.display !== "none") {
+          loadOverview();
+        }
+        checkServices();
+      }, 30000);
+    </script>
+  </body>
+</html>

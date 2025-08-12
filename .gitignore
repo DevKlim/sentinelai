@@ -74,12 +74,6 @@ node_modules/
 # Docker
 .dockerignore
 
-# Environment variables
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
 
 # Coverage reports
 htmlcov/
@@ -157,3 +151,7 @@ dmypy.json
 *.exe
 *.msi
 *.app 
+
+data/
+
+.next

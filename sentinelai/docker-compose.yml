@@ -55,7 +55,7 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
       - LLM_PROVIDER=openrouter
-      - OPENROUTER_API_KEY=AIzaSyDQN7wmwnA7sWNilhwufrytRn2U7ad51yY
+      - OPENROUTER_API_KEY=
       - PORT=8000
     networks:
       - sds_network

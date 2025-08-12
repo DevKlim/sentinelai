@@ -1,0 +1,334 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sentinel AI - Incident Details</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        color: #ffffff;
+        line-height: 1.6;
+      }
+
+      .container {
+        max-width: 1200px;
+        margin: 2rem auto;
+        padding: 2rem;
+      }
+
+      .header {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .header-info h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffffff;
+        margin-bottom: 0.5rem;
+      }
+
+      .header-info p {
+        color: #cccccc;
+        font-size: 1.1rem;
+        font-weight: 300;
+        text-transform: capitalize;
+      }
+
+      .incident-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 2rem;
+      }
+
+      .incident-card {
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+      }
+
+      .incident-card h2 {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin-bottom: 1rem;
+        border-bottom: 1px solid #333;
+        padding-bottom: 0.5rem;
+      }
+
+      .incident-summary {
+        white-space: pre-wrap;
+        font-family: "Inter", sans-serif;
+        background: #1a1a1a;
+        padding: 1rem;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        color: #cccccc;
+        line-height: 1.7;
+      }
+
+      .report-list {
+        list-style: none;
+        max-height: 600px;
+        overflow-y: auto;
+      }
+
+      .report-item {
+        background: #1a1a1a;
+        border: 1px solid #333333;
+        border-radius: 8px;
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .report-item:hover {
+        border-color: #ffffff;
+        background: #222222;
+      }
+
+      .report-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+      }
+
+      .report-header h3 {
+        font-size: 1.2rem;
+      }
+
+      .action-btn {
+        background: #333;
+        color: #fff;
+        border: none;
+        padding: 0.5rem 1rem;
+        border-radius: 6px;
+        cursor: pointer;
+        text-decoration: none;
+        font-weight: 500;
+        transition: all 0.2s ease;
+        margin-left: 0.5rem;
+      }
+
+      .action-btn:hover {
+        background-color: #444;
+      }
+
+      .close-btn {
+        background-color: #d9534f;
+        border-color: #d43f3a;
+        font-weight: 600;
+      }
+
+      .close-btn:hover {
+        background-color: #c9302c;
+      }
+
+      .download-btn {
+        background: #ffffff;
+        color: #000000;
+      }
+      .download-btn:hover {
+        background-color: #cccccc;
+      }
+
+      .json-view {
+        margin-top: 1rem;
+        background: #000;
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid #333;
+        max-height: 400px;
+        overflow-y: auto;
+      }
+
+      .json-view pre {
+        white-space: pre-wrap;
+        word-wrap: break-word;
+        font-family: monospace;
+      }
+
+      .report-item p {
+        margin-bottom: 0.5rem;
+        color: #cccccc;
+      }
+      .report-item p strong {
+        color: #ffffff;
+      }
+
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #ffffff;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #111111;
+        border: 1px solid #333333;
+        border-radius: 8px;
+      }
+
+      .back-link:hover {
+        border-color: #ffffff;
+        background: #1a1a1a;
+        transform: translateX(-5px);
+      }
+
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+
+      @media (max-width: 900px) {
+        .incident-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/dashboard/" class="back-link">
+        <i class="fas fa-arrow-left"></i>
+        Back to Dashboard
+      </a>
+      <div class="header">
+        <div class="header-info">
+          <h1>{{ incident.name }}</h1>
+          <p>
+            Status: <span id="incident-status">{{ incident.status }}</span> |
+            Type: {{ incident.incident_type }}
+          </p>
+        </div>
+        {% if incident.status.lower() == 'open' %}
+        <button
+          id="close-incident-btn"
+          class="action-btn close-btn"
+          onclick="closeIncident('{{ incident.incident_id }}')"
+        >
+          <i class="fas fa-check-circle"></i> Close Incident
+        </button>
+        {% endif %}
+      </div>
+
+      <div class="incident-grid">
+        <div class="incident-card">
+          <h2><i class="fas fa-file-alt"></i> Incident Summary</h2>
+          <div class="incident-summary">
+            {{ incident.summary or "No summary available." }}
+          </div>
+        </div>
+
+        <div class="incident-card">
+          <h2><i class="fas fa-receipt"></i> EIDO Reports</h2>
+          <ul class="report-list">
+            {% if incident.reports_core_data %} {% for report in
+            incident.reports_core_data %}
+            <li class="report-item">
+              <div class="report-header">
+                <h3>Report #{{ report.report_id or loop.index }}</h3>
+                <div>
+                  <button
+                    class="action-btn"
+                    onclick="toggleJsonView('{{ loop.index }}')"
+                  >
+                    <i class="fas fa-code"></i> View JSON
+                  </button>
+                  <a
+                    href="data:text/json;charset=utf-8,{{ report.original_eido_dict | tojson | urlencode }}"
+                    download="eido_report_{{ report.report_id or loop.index }}.json"
+                    class="action-btn download-btn"
+                  >
+                    <i class="fas fa-download"></i> Download
+                  </a>
+                </div>
+              </div>
+              <p><strong>Timestamp:</strong> {{ report.timestamp }}</p>
+              <p><strong>Source:</strong> {{ report.source }}</p>
+              <p><strong>Description:</strong> {{ report.description }}</p>
+              <div
+                id="json-view-{{ loop.index }}"
+                class="json-view"
+                style="display: none"
+              >
+                <pre><code>{{ report.original_eido_dict | tojson(indent=2) }}</code></pre>
+              </div>
+            </li>
+            {% endfor %} {% else %}
+            <p>No EIDO reports found for this incident.</p>
+            {% endif %}
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function toggleJsonView(id) {
+        const view = document.getElementById(`json-view-${id}`);
+        view.style.display = view.style.display === "none" ? "block" : "none";
+      }
+
+      async function closeIncident(incidentId) {
+        if (
+          !confirm(
+            "Are you sure you want to close this incident? This action cannot be undone."
+          )
+        ) {
+          return;
+        }
+        try {
+          const response = await fetch(
+            `/dashboard/api/incidents/${incidentId}/close`,
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+            }
+          );
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(result.detail || "Failed to close incident");
+          }
+
+          alert("Incident closed successfully!");
+
+          // Update UI
+          document.getElementById("incident-status").textContent = "closed";
+          const closeButton = document.getElementById("close-incident-btn");
+          if (closeButton) {
+            closeButton.style.display = "none";
+          }
+        } catch (error) {
+          console.error("Error closing incident:", error);
+          alert(`Error: ${error.message}`);
+        }
+      }
+    </script>
+  </body>
+</html>
