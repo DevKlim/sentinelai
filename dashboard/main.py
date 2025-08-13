@@ -1,8 +1,11 @@
 from fastapi import FastAPI, Request, HTTPException, UploadFile, File
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 import httpx
 import os
+import json
+import io
+import zipfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import random
@@ -83,31 +86,25 @@ async def submit_report(file: UploadFile = File(...)):
             payload = {"alert_text": alert_text}
             
             async with httpx.AsyncClient(timeout=120.0) as client:
+                # This endpoint on the EIDO agent will create an EIDO and mark it 'uncategorized'
+                # The IDX agent will then pick it up for classification.
                 response = await client.post(
-                    f"{EIDO_API_URL}/api/v1/ingest_alert",
+                    f"{EIDO_API_URL}/api/v1/ingest_alert", 
                     json=payload
                 )
                 response.raise_for_status()
                 return JSONResponse(content=response.json(), status_code=response.status_code)
         else:
             # Placeholder for audio transcription logic
-            # For now, we'll just return an error for non-text files.
             raise HTTPException(
                 status_code=415, # Unsupported Media Type
                 detail=f"Unsupported file type: {content_type}. Only text files are currently supported."
             )
 
     except httpx.HTTPStatusError as e:
-        # Forward the error response from the EIDO agent
-        raise HTTPException(
-            status_code=e.response.status_code, 
-            detail=f"Error from EIDO Agent: {e.response.text}"
-        )
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=502, # Bad Gateway
-            detail=f"Could not connect to EIDO Agent: {str(e)}"
-        )
+        raise HTTPException(status_code=502, detail=f"Could not connect to EIDO Agent: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -123,6 +120,84 @@ async def eido_submit_page(request: Request):
 async def idx_search_page(request: Request):
     """Serves the IDX search HTML page."""
     return templates.TemplateResponse("idx_search.html", {"request": request})
+
+# --- New API Endpoints for Incident Management ---
+
+@app.post("/api/incidents/{incident_id}/tags")
+async def add_incident_tag(incident_id: str, request: Request):
+    """Proxies a request to add a tag to an incident to the EIDO agent."""
+    try:
+        tag_data = await request.json()  # expecting {"tag": "new_tag"}
+        async with httpx.AsyncClient() as client:
+            # Assuming EIDO agent has an endpoint to add tags
+            response = await client.post(
+                f"{EIDO_API_URL}/api/v1/incidents/{incident_id}/tags",
+                json=tag_data,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/incidents/{incident_id}")
+async def delete_incident(incident_id: str):
+    """Proxies a request to delete an incident to the EIDO agent."""
+    try:
+        async with httpx.AsyncClient() as client:
+            # Assuming EIDO agent has an endpoint to delete incidents
+            response = await client.delete(
+                f"{EIDO_API_URL}/api/v1/incidents/{incident_id}",
+                timeout=30.0
+            )
+            response.raise_for_status()
+            if response.status_code == 204:
+                return JSONResponse(content={"message": "Incident deleted successfully"}, status_code=204)
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/incidents/{incident_id}/download")
+async def download_incident_zip(incident_id: str):
+    """Fetches all EIDOs for an incident, zips them, and returns for download."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{EIDO_API_URL}/api/v1/incidents/{incident_id}",
+                timeout=30.0
+            )
+            response.raise_for_status()
+            incident = response.json()
+
+        reports = incident.get("reports_core_data", [])
+        if not reports:
+            raise HTTPException(status_code=404, detail="No EIDO reports found for this incident.")
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            for i, report in enumerate(reports):
+                report_id = report.get("report_id", f"report_{i+1}")
+                eido_json = report.get("original_eido_dict")
+                if eido_json:
+                    file_name = f"eido_report_{report_id}.json"
+                    json_str = json.dumps(eido_json, indent=2)
+                    zip_file.writestr(file_name, json_str.encode('utf-8'))
+
+        zip_buffer.seek(0)
+        
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename=incident_{incident_id}_eidos.zip"}
+        )
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 # --- API Endpoints for Dashboard Widgets ---
 
@@ -211,17 +286,13 @@ async def get_response_time_analytics():
 async def get_trends():
     """Provides real incident trend data for the last 30 days."""
     try:
-        # Fetch all incidents from the EIDO API
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{EIDO_API_URL}/api/v1/incidents", timeout=10.0)
             response.raise_for_status()
             incidents = response.json()
 
-        # Process incidents to get daily counts
         now = datetime.now(timezone.utc)
         start_date = now - timedelta(days=29)
-        
-        # Create a dictionary to hold counts for each day in the last 30 days
         daily_counts_map = defaultdict(int)
         
         for incident in incidents:
@@ -231,37 +302,21 @@ async def get_trends():
                     created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
                     if created_at.tzinfo is None:
                         created_at = created_at.replace(tzinfo=timezone.utc)
-                    
-                    # Only include incidents from the last 30 days
                     if created_at >= start_date:
                         day_str = created_at.strftime('%Y-%m-%d')
                         daily_counts_map[day_str] += 1
                 except (ValueError, TypeError):
-                    pass  # Ignore incidents with invalid date formats
+                    pass
 
-        # Generate the final lists for the chart
         dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
         counts = [daily_counts_map[day_str] for day_str in dates]
 
-        return JSONResponse(content={
-            "daily_counts": {
-                "dates": dates,
-                "counts": counts
-            }
-        })
+        return JSONResponse(content={"daily_counts": {"dates": dates, "counts": counts}})
     except Exception as e:
-        # Fallback to placeholder data on error
         dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
         dates.reverse()
         counts = [0] * 30
-        return JSONResponse(content={
-            "daily_counts": {
-                "dates": dates,
-                "counts": counts
-            },
-            "error": f"Analytics error: {str(e)}"
-        })
-
+        return JSONResponse(content={"daily_counts": {"dates": dates, "counts": counts}, "error": f"Analytics error: {str(e)}"})
 
 if __name__ == "__main__":
     import uvicorn
