@@ -2,7 +2,8 @@ from fastapi import APIRouter, HTTPException, Body, UploadFile, File
 from fastapi.openapi.utils import get_openapi
 import httpx
 import json
-from dotenv import set_key
+from dotenv import set_key, get_key, find_dotenv
+import os
 
 from models.schemas import Incident, CorrelationRequest, CorrelationResponse
 from config.settings import settings
@@ -14,21 +15,43 @@ EIDO_AGENT_URL = settings.eido_agent_url
 # Store "claimed" incidents in memory for simplicity
 claimed_incidents = set()
 
+@router.get("/settings/env", response_model=dict)
+async def get_idx_env_settings():
+    """Gets current environment settings for the IDX agent."""
+    env_path = find_dotenv()
+    if not env_path:
+        return {"error": ".env file not found."}
+    
+    settings_keys = [
+        "LLM_PROVIDER", "GOOGLE_API_KEY", "OPENAI_API_KEY",
+        "GOOGLE_MODEL_NAME", "OPENAI_MODEL_NAME", "LOCAL_LLM_URL"
+    ]
+    
+    current_settings = {}
+    for key in settings_keys:
+        value = get_key(env_path, key)
+        if "API_KEY" in key and value:
+            current_settings[key] = "********"
+        else:
+            current_settings[key] = value or ""
+            
+    return current_settings
+
 @router.post("/settings/env")
 async def update_env_settings(new_settings: dict):
     """
-    Update the .env file with new settings and restart the categorizer.
+    Update the .env file with new settings and signal the categorizer to restart.
     """
     try:
+        env_path = find_dotenv()
+        if not env_path:
+             raise HTTPException(status_code=500, detail=".env file not found.")
+
         for key, value in new_settings.items():
-            set_key(".env", key, value)
-        # This is a simple way to restart the categorizer.
-        # In a production environment, you'd want a more robust mechanism.
-        # For example, you could have a separate process manager for the categorizer.
-        # For now, we'll just signal the main process to restart it.
-        # This is a simplified example and might not work in all deployment scenarios.
-        # A more robust solution would involve inter-process communication or a process manager.
-        # We will add a file that the main process can check to see if it needs to restart the categorizer.
+            if value == "********": continue # Don't update masked values
+            set_key(env_path, key, str(value))
+        
+        # Signal the main process to restart the categorizer to pick up new settings.
         with open("restart_categorizer.flag", "w") as f:
             f.write("restart")
         return {"message": "Settings updated successfully. Categorizer will restart."}

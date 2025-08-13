@@ -80,7 +80,8 @@
         font-weight: 500;
         margin-bottom: 0.5rem;
       }
-      .form-textarea {
+      .form-textarea,
+      .form-select {
         width: 100%;
         padding: 1rem;
         border: 1px solid #333;
@@ -88,10 +89,13 @@
         font-size: 1rem;
         background: #1a1a1a;
         color: #fff;
-        min-height: 200px;
         resize: vertical;
       }
-      .form-textarea:focus {
+      .form-textarea {
+        min-height: 200px;
+      }
+      .form-textarea:focus,
+      .form-select:focus {
         outline: none;
         border-color: #fff;
       }
@@ -138,10 +142,6 @@
       }
       .btn i {
         margin-right: 0.5rem;
-      }
-      .radio-group label {
-        margin-right: 1.5rem;
-        cursor: pointer;
       }
       .result {
         display: none;
@@ -211,7 +211,19 @@
         <div class="form-container">
           <form id="text-form">
             <div class="form-group">
-              <label class="form-label">Raw Incident Text</label>
+              <label for="template-select" class="form-label"
+                >EIDO Template</label
+              >
+              <select id="template-select" class="form-select">
+                {% for template in templates %}
+                <option value="{{ template }}">
+                  {{ template.replace('.json', '').replace('_', ' ')|title }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="raw-text" class="form-label">Raw Incident Text</label>
               <textarea
                 id="raw-text"
                 class="form-textarea"
@@ -248,27 +260,7 @@
 
       <div id="audio" class="tab-content">
         <div class="form-container">
-          <form id="audio-form">
-            <div class="form-group">
-              <label class="form-label">Upload 911 Call Audio/Video File</label>
-              <div class="file-input-container" id="drop-zone-audio">
-                <input
-                  type="file"
-                  id="audio-upload"
-                  accept="audio/*,video/mp4"
-                  required
-                />
-                <i class="fas fa-microphone-alt"></i>
-                <p id="file-name-audio">
-                  Drag & drop an audio file (.wav, .mp3, .mp4, etc.), or click
-                  to select
-                </p>
-              </div>
-            </div>
-            <button type="submit" class="btn">
-              <i class="fas fa-robot"></i> Transcribe and Generate EIDO
-            </button>
-          </form>
+          <p>Audio processing is not yet implemented.</p>
         </div>
       </div>
 
@@ -282,20 +274,21 @@
       function openTab(evt, tabName) {
         document
           .querySelectorAll(".tab-content")
-          .forEach((tc) => tc.classList.remove("active"));
+          .forEach((tc) => (tc.style.display = "none"));
         document
           .querySelectorAll(".tab-button")
           .forEach((tb) => tb.classList.remove("active"));
-        document.getElementById(tabName).classList.add("active");
+        document.getElementById(tabName).style.display = "block";
         evt.currentTarget.classList.add("active");
       }
 
       const resultContainer = document.getElementById("result-container");
       const resultJson = document.getElementById("result-json");
 
-      async function submitFile(file) {
+      async function submitForm(file, templateName) {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("template_name", templateName);
 
         showResult(`Processing ${file.name}... This may take a moment.`, true);
 
@@ -325,6 +318,7 @@
         .addEventListener("submit", async (e) => {
           e.preventDefault();
           const text = document.getElementById("raw-text").value;
+          const templateName = document.getElementById("template-select").value;
           if (!text.trim()) {
             alert("Please enter some incident text.");
             return;
@@ -333,7 +327,7 @@
           const textFile = new File([textBlob], "incident.txt", {
             type: "text/plain",
           });
-          await submitFile(textFile);
+          await submitForm(textFile, templateName);
         });
 
       // Handle JSON File Upload
@@ -357,31 +351,7 @@
             return;
           }
           const file = fileUpload.files[0];
-          await submitFile(file);
-        });
-
-      // Handle Audio File Upload
-      const dropZoneAudio = document.getElementById("drop-zone-audio");
-      const audioUpload = document.getElementById("audio-upload");
-      const fileNameDisplayAudio = document.getElementById("file-name-audio");
-
-      dropZoneAudio.addEventListener("click", () => audioUpload.click());
-      audioUpload.addEventListener("change", () => {
-        if (audioUpload.files.length > 0) {
-          fileNameDisplayAudio.textContent = audioUpload.files[0].name;
-        }
-      });
-
-      document
-        .getElementById("audio-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          if (audioUpload.files.length === 0) {
-            alert("Please select an audio file.");
-            return;
-          }
-          const file = audioUpload.files[0];
-          await submitFile(file);
+          await submitForm(file, "default.json"); // Template name is ignored for JSON uploads
         });
 
       function showResult(content, isLoading = false) {

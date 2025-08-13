@@ -1,0 +1,382 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>System Settings - Sentinel AI</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000;
+        color: #fff;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+      }
+      h2 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        border-bottom: 1px solid #333;
+        padding-bottom: 0.5rem;
+        margin-bottom: 1.5rem;
+      }
+      .settings-card {
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 12px;
+        padding: 2rem;
+        margin-bottom: 2rem;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      .form-label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+      }
+      .form-input {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #333;
+        border-radius: 8px;
+        font-size: 1rem;
+        background: #1a1a1a;
+        color: #fff;
+      }
+      .form-input:focus {
+        outline: none;
+        border-color: #fff;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #fff;
+        color: #000;
+        border: 1px solid #fff;
+      }
+      .btn:hover {
+        background: #ccc;
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 8px;
+      }
+      .back-link:hover {
+        border-color: #fff;
+      }
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+      .response-message {
+        display: none;
+        margin-top: 1rem;
+        padding: 1rem;
+        border-radius: 8px;
+      }
+      .response-message.success {
+        background: #28a745;
+        color: #fff;
+      }
+      .response-message.error {
+        background: #dc3545;
+        color: #fff;
+      }
+      /* Toggle Switch */
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #ccc;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #2196f3;
+      }
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/dashboard/" class="back-link"
+        ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
+      >
+      <div class="header">
+        <h1>System Settings</h1>
+      </div>
+
+      <!-- IDX Agent Settings -->
+      <div class="settings-card">
+        <h2><i class="fas fa-cogs"></i> IDX Agent</h2>
+        <div id="idx-categorizer-control">
+          <h3>Incident Categorizer Routine</h3>
+          <p>
+            Automatically categorizes new EIDO reports into existing or new
+            incidents.
+          </p>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              margin-top: 1rem;
+            "
+          >
+            <label class="switch">
+              <input type="checkbox" id="categorizer-toggle" />
+              <span class="slider"></span>
+            </label>
+            <span id="categorizer-status-text">Status: Loading...</span>
+          </div>
+        </div>
+        <hr style="border-color: #333; margin: 2rem 0" />
+        <form id="idx-settings-form">
+          <h3>Environment Variables</h3>
+          <p style="color: #ccc; margin-bottom: 1rem">
+            Changes require the categorizer to restart.
+          </p>
+          <!-- Fields will be populated by JS -->
+          <button type="submit" class="btn">Save IDX Settings</button>
+          <div
+            id="idx-response"
+            class="response-message"
+            style="margin-top: 1rem"
+          ></div>
+        </form>
+      </div>
+
+      <!-- EIDO Agent Settings -->
+      <div class="settings-card">
+        <h2><i class="fas fa-robot"></i> EIDO Agent</h2>
+        <form id="eido-settings-form">
+          <h3>Environment Variables</h3>
+          <p style="color: #ccc; margin-bottom: 1rem">
+            Changes require the EIDO agent service to be restarted manually.
+          </p>
+          <!-- Fields will be populated by JS -->
+          <button type="submit" class="btn">Save EIDO Settings</button>
+          <div
+            id="eido-response"
+            class="response-message"
+            style="margin-top: 1rem"
+          ></div>
+        </form>
+      </div>
+    </div>
+
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        loadCategorizerStatus();
+        loadSettings("idx");
+        loadSettings("eido");
+
+        document
+          .getElementById("categorizer-toggle")
+          .addEventListener("change", handleToggleCategorizer);
+        document
+          .getElementById("idx-settings-form")
+          .addEventListener("submit", (e) => handleSaveSettings(e, "idx"));
+        document
+          .getElementById("eido-settings-form")
+          .addEventListener("submit", (e) => handleSaveSettings(e, "eido"));
+      });
+
+      function createFormFields(formId, settings) {
+        const form = document.getElementById(formId);
+        // Clear previous fields except for the button and response div
+        while (form.childNodes.length > 2) {
+          if (
+            form.firstChild.nodeName !== "H3" &&
+            form.firstChild.nodeName !== "P"
+          ) {
+            form.removeChild(form.firstChild);
+          } else {
+            break; // Stop when we hit the h3/p
+          }
+        }
+
+        const fragment = document.createDocumentFragment();
+        Object.entries(settings).forEach(([key, value]) => {
+          if (key === "error") return;
+          const group = document.createElement("div");
+          group.className = "form-group";
+
+          const label = document.createElement("label");
+          label.className = "form-label";
+          label.setAttribute("for", `${formId}-${key}`);
+          label.textContent = key;
+
+          const input = document.createElement("input");
+          input.className = "form-input";
+          input.id = `${formId}-${key}`;
+          input.name = key;
+          input.type = key.includes("API_KEY") ? "password" : "text";
+          input.value = value;
+
+          group.appendChild(label);
+          group.appendChild(input);
+          fragment.appendChild(group);
+        });
+        // Insert fields before the submit button
+        form.insertBefore(fragment, form.querySelector("button"));
+      }
+
+      async function loadSettings(agent) {
+        try {
+          const response = await fetch(`/dashboard/api/settings/${agent}`);
+          if (!response.ok) throw new Error("Failed to load settings.");
+          const settings = await response.json();
+          createFormFields(`${agent}-settings-form`, settings);
+        } catch (error) {
+          console.error(`Error loading ${agent} settings:`, error);
+        }
+      }
+
+      async function handleSaveSettings(event, agent) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const settings = Object.fromEntries(formData.entries());
+
+        const responseDiv = document.getElementById(`${agent}-response`);
+        try {
+          const response = await fetch(`/dashboard/api/settings/${agent}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ settings }),
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.detail || "Save failed.");
+
+          showResponseMessage(
+            responseDiv,
+            result.message || "Settings saved successfully!",
+            "success"
+          );
+        } catch (error) {
+          showResponseMessage(responseDiv, error.message, "error");
+        }
+      }
+
+      async function loadCategorizerStatus() {
+        try {
+          const response = await fetch(
+            "/dashboard/api/settings/idx/categorizer/status"
+          );
+          if (!response.ok) throw new Error("Failed to get status.");
+          const data = await response.json();
+          updateCategorizerUI(data);
+        } catch (error) {
+          console.error("Error loading categorizer status:", error);
+          document.getElementById("categorizer-status-text").textContent =
+            "Status: Error";
+        }
+      }
+
+      async function handleToggleCategorizer(event) {
+        const enable = event.target.checked;
+        try {
+          const response = await fetch(
+            "/dashboard/api/settings/idx/categorizer/toggle",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ enable }),
+            }
+          );
+          if (!response.ok) throw new Error("Failed to toggle categorizer.");
+          const data = await response.json();
+          updateCategorizerUI(data.new_state);
+        } catch (error) {
+          console.error("Error toggling categorizer:", error);
+          // Revert toggle on error
+          event.target.checked = !enable;
+        }
+      }
+
+      function updateCategorizerUI(data) {
+        const toggle = document.getElementById("categorizer-toggle");
+        const statusText = document.getElementById("categorizer-status-text");
+        toggle.checked = data.enabled;
+        const status = data.enabled ? `Enabled (${data.status})` : "Disabled";
+        statusText.textContent = `Status: ${status}`;
+      }
+
+      function showResponseMessage(element, message, type) {
+        element.textContent = message;
+        element.className = `response-message ${type}`;
+        element.style.display = "block";
+        setTimeout(() => {
+          element.style.display = "none";
+        }, 5000);
+      }
+    </script>
+  </body>
+</html>

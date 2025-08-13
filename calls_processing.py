@@ -25,15 +25,18 @@ def process_calls():
                 # 1. Generate EIDO from raw text (transcript)
                 # The EIDO agent uses an LLM to parse the 'scenario_description' 
                 # into a structured EIDO JSON and generate a summary.
-                response = requests.post(f"{EIDO_AGENT_URL}/api/v1/generate_eido_from_template", json={"template_name": "fire_incident.json", "scenario_description": call["Transcript"]})
+                response = requests.post(f"{EIDO_AGENT_URL}/api/v1/generate_eido_from_template", json={"template_name": "general_incident.json", "scenario_description": call["Transcript"]})
                 response.raise_for_status()
                 eido = response.json().get("generated_eido")
                 print(f"Generated EIDO: {eido}")
 
                 # 2. Ingest EIDO and create an initial incident
-                # The EIDO agent tags the EIDO with details like location, time, and name.
-                # Initially, it's marked as 'uncategorized'.
-                response = requests.post(f"{EIDO_AGENT_URL}/api/v1/ingest", json=eido)
+                # The payload must be wrapped with a source and the original EIDO object.
+                ingest_payload = {
+                    "source": "calls_processing_script",
+                    "original_eido": eido
+                }
+                response = requests.post(f"{EIDO_AGENT_URL}/api/v1/ingest", json=ingest_payload)
                 response.raise_for_status()
                 incident = response.json()
                 print(f"Ingested EIDO and created initial incident record: {incident}")

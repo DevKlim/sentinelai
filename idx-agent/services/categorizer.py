@@ -2,30 +2,29 @@ import threading
 import asyncio
 import httpx
 import json
-from datetime import datetime, timedelta
+from datetime import datetime
 from math import radians, sin, cos, sqrt, atan2
-
-from config.settings import settings
 from services.llm_service import get_llm_client
+from config.settings import settings
 
 def haversine(lat1, lon1, lat2, lon2):
-    """
-    Calculate the great-circle distance between two points
-    on the earth (specified in decimal degrees).
-    """
+    """Calculate distance between two points on Earth."""
     if None in [lat1, lon1, lat2, lon2]:
         return float('inf')
-        
-    # convert decimal degrees to radians
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-
-    # haversine formula
-    dlon = lon2 - lon1
-    dlat = lat2 - lat1
+    lon1, lat1, lon2, lat2 = map(radians, [float(lon1), float(lat1), float(lon2), float(lat2)])
+    dlon, dlat = lon2 - lon1, lat2 - lat1
     a = sin(dlat / 2)**2 + cos(lat1) * cos(lat2) * sin(dlon / 2)**2
-    c = 2 * atan2(sqrt(a), sqrt(1 - a))
-    r = 6371  # Radius of earth in kilometers.
-    return c * r
+    return 6371 * (2 * atan2(sqrt(a), sqrt(1 - a)))
+
+def text_similarity(text1, text2):
+    """Simple keyword overlap similarity."""
+    if not text1 or not text2:
+        return 0.0
+    words1 = set(text1.lower().split())
+    words2 = set(text2.lower().split())
+    intersection = words1.intersection(words2)
+    union = words1.union(words2)
+    return len(intersection) / len(union) if union else 0.0
 
 class IncidentCategorizer:
     def __init__(self):
@@ -35,74 +34,76 @@ class IncidentCategorizer:
         except ValueError as e:
             print(f"LLM client not configured, categorizer will be inactive: {e}")
             self.llm_client = None
-            self.llm_provider = None
-        self.check_interval = 30 # Check every 30 seconds
-        self.time_window_hours = 4  # Time window for algorithmic matching
-        self.distance_threshold_km = 5 # Distance threshold for algorithmic matching
+        self.check_interval = 15  # Check every 15 seconds
+        self.time_window_hours = 6
+        self.distance_threshold_km = 10
+        self.similarity_threshold = 0.1
 
     async def fetch_uncategorized_eidos(self):
-        """Fetches EIDOs marked as 'uncategorized' from the EIDO agent."""
+        """Fetches EIDOs marked as 'uncategorized'."""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(f"{self.eido_agent_url}/api/v1/eidos?status=uncategorized")
                 response.raise_for_status()
                 return response.json()
-        except httpx.HTTPStatusError as e:
-            print(f"Error fetching uncategorized EIDOs: {e.response.text}")
-            return []
-        except httpx.RequestError as e:
-            print(f"Could not connect to EIDO agent: {e}")
+        except Exception as e:
+            print(f"Error fetching uncategorized EIDOs: {e}")
             return []
 
     async def fetch_active_incidents(self):
-        """Fetches active ('open') incidents from the EIDO agent."""
+        """Fetches active ('open') incidents."""
         try:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(f"{self.eido_agent_url}/api/v1/incidents?status=open")
                 response.raise_for_status()
                 return response.json()
-        except httpx.HTTPStatusError as e:
-            print(f"Error fetching active incidents: {e.response.text}")
-            return []
-        except httpx.RequestError as e:
-            print(f"Could not connect to EIDO agent to fetch active incidents: {e}")
+        except Exception as e:
+            print(f"Error fetching active incidents: {e}")
             return []
 
     def find_potential_matches(self, new_eido, active_incidents):
-        """Algorithmically filters active incidents to find potential matches based on time and location."""
+        """Finds potential matches based on time, location, and text similarity."""
         potential_matches = []
-        new_eido_location = new_eido.get("location")
+        new_eido_loc = new_eido.get("location")
         new_eido_time_str = new_eido.get("timestamp")
+        new_eido_desc = new_eido.get("description", "")
 
-        if not new_eido_location or not isinstance(new_eido_location, dict) or not new_eido_time_str:
+        if not new_eido_loc or not isinstance(new_eido_loc, dict) or not new_eido_time_str:
             return []
         
-        new_lat = new_eido_location.get('latitude')
-        new_lon = new_eido_location.get('longitude')
-        
-        if new_lat is None or new_lon is None:
-             return []
+        new_lat, new_lon = new_eido_loc.get('latitude'), new_eido_loc.get('longitude')
+        if new_lat is None or new_lon is None: return []
 
         try:
             new_time = datetime.fromisoformat(new_eido_time_str.replace('Z', '+00:00'))
         except (ValueError, TypeError):
-            print(f"Invalid timestamp format for EIDO {new_eido.get('eido_id')}: {new_eido_time_str}")
             return []
 
         for incident in active_incidents:
+            is_match = False
+            # Time check
             try:
+                # The incident's created_at will be a string in the JSON response
                 incident_time = datetime.fromisoformat(incident.get('created_at').replace('Z', '+00:00'))
                 if abs((new_time - incident_time).total_seconds()) > self.time_window_hours * 3600:
                     continue
-            except (ValueError, TypeError):
-                continue # Skip incident if it has invalid time
+            except (ValueError, TypeError, AttributeError): continue
 
+            # Location check
             for loc in incident.get("locations", []):
                 if isinstance(loc, list) and len(loc) == 2:
                     dist = haversine(new_lat, new_lon, loc[0], loc[1])
                     if dist <= self.distance_threshold_km:
-                        potential_matches.append(incident)
+                        is_match = True
                         break
+            if not is_match: continue
+
+            # Text similarity check
+            incident_text = f"{incident.get('name', '')} {incident.get('summary', '')} {' '.join(incident.get('tags', []))}"
+            if text_similarity(new_eido_desc, incident_text) < self.similarity_threshold:
+                continue
+
+            potential_matches.append(incident)
         return potential_matches
 
     async def get_incident_match_from_llm(self, new_eido, candidate_incidents):
@@ -110,180 +111,156 @@ class IncidentCategorizer:
         if not self.llm_client or not candidate_incidents:
             return None
 
-        prompt_header = f"""
+        prompt = f"""
         You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) belongs to an existing active incident.
 
-        Here is the new EIDO report:
-        - EIDO ID: {new_eido.get('eido_id')}
-        - Description: "{new_eido.get('description', 'No description provided.')}"
+        New EIDO Report:
+        - Description: "{new_eido.get('description', 'N/A')}"
         - Timestamp: {new_eido.get('timestamp')}
         - Location: {new_eido.get('location')}
 
-        Below is a list of potentially related active incidents. These were pre-filtered based on time and location. Review them and decide if the new EIDO is an update to one of them or represents a completely new incident.
-        """
+        Potentially Related Active Incidents:
+        {json.dumps(candidate_incidents, indent=2, default=str)}
 
-        incident_summaries = ""
-        for i, incident in enumerate(candidate_incidents):
-            incident_summaries += f"""
-            ---
-            Candidate Incident {i+1}:
-            - Incident ID: {incident.get('incident_id')}
-            - Incident Name: "{incident.get('name')}"
-            - Incident Type: "{incident.get('incident_type')}"
-            - Incident Summary: "{incident.get('summary')}"
-            - Tags: {', '.join(incident.get('tags', []))}
-            - Created At: {incident.get('created_at')}
-            ---
-            """
+        Analyze the new EIDO against the candidates. Respond with a JSON object.
         
-        prompt_footer = f"""
-        Analyze the new EIDO against the candidate incidents. Consider factors like event type, location proximity, time proximity, and details in the descriptions and tags.
-
-        Respond with a JSON object with one of the following structures:
-
-        1. If the new EIDO matches an existing incident, use this format:
+        If it's a MATCH, use this format:
         {{
             "decision": "MATCH",
             "incident_id": "the_id_of_the_matching_incident",
-            "reason": "A brief explanation for why it's a match."
+            "reason": "Briefly explain the match."
         }}
 
-        2. If the new EIDO does NOT match any of the candidates and should be a new incident, use this format:
+        If it's a NEW incident, use this format:
         {{
             "decision": "NEW",
-            "reason": "A brief explanation for why it's a new incident.",
+            "reason": "Briefly explain why it's a new incident.",
             "incident_details": {{
-                "incident_name": "A concise name for the new incident (e.g., 'Vehicle Collision on I-5').",
-                "incident_type": "A general category (e.g., 'Fire', 'Medical Emergency', 'Traffic Accident').",
-                "summary": "A brief summary of the new incident based on the EIDO text.",
-                "tags": ["tag1", "tag2"]
+                "incident_name": "A concise, descriptive name for the new incident.",
+                "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.",
+                "summary": "A brief summary of the new incident.",
+                "tags": ["relevant", "keywords"]
             }}
         }}
 
         Your JSON response:
         """
-        prompt = prompt_header + incident_summaries + prompt_footer
-
         try:
-            if self.llm_provider == 'google':
-                response = self.llm_client.generate_content(prompt)
-                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
-                return json.loads(clean_response)
-            else: # OpenAI or local
-                response = self.llm_client.completions.create(
-                    model=settings.openai_model_name if self.llm_provider == 'openai' else "local-model",
-                    messages=[{{"role": "user", "content": prompt}}],
-                    response_format={{"type": "json_object"}},
-                )
-                return json.loads(response.choices[0].message.content)
+            # FIX: Use a default handler to convert datetimes to strings for JSON serialization
+            prompt_payload = json.dumps(candidate_incidents, indent=2, default=str)
+            
+            # The full prompt construction remains the same
+            full_prompt = f"""
+            You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) belongs to an existing active incident.
+
+            New EIDO Report:
+            - Description: "{new_eido.get('description', 'N/A')}"
+            - Timestamp: {new_eido.get('timestamp')}
+            - Location: {new_eido.get('location')}
+
+            Potentially Related Active Incidents:
+            {prompt_payload}
+
+            Analyze the new EIDO against the candidates. Respond with a JSON object.
+            
+            If it's a MATCH, use this format:
+            {{
+                "decision": "MATCH",
+                "incident_id": "the_id_of_the_matching_incident",
+                "reason": "Briefly explain the match."
+            }}
+
+            If it's a NEW incident, use this format:
+            {{
+                "decision": "NEW",
+                "reason": "Briefly explain why it's a new incident.",
+                "incident_details": {{
+                    "incident_name": "A concise, descriptive name for the new incident.",
+                    "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.",
+                    "summary": "A brief summary of the new incident.",
+                    "tags": ["relevant", "keywords"]
+                }}
+            }}
+
+            Your JSON response:
+            """
+            response = self.llm_client.generate_content(full_prompt)
+            clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            return json.loads(clean_response)
         except Exception as e:
-            print(f"LLM matching failed: {e}\nPrompt was: {prompt}")
+            print(f"LLM matching failed: {e}")
             return None
 
-    async def create_new_incident_from_eido(self, eido: dict):
-        """Generates incident details from an EIDO and links it to a new incident."""
-        print(f"Generating details for a new incident from EIDO {eido.get('eido_id')}")
+    async def create_new_incident_details(self, eido: dict):
+        """Uses LLM to generate details for a new incident from an EIDO."""
+        if not self.llm_client:
+            return None
         prompt = f"""
-        Analyze the following EIDO text and determine the incident details.
+        Analyze the following EIDO text and generate details for a new incident.
         EIDO Text: "{eido.get('description', '')}"
 
-        Based on the text, provide the following in JSON format:
-        - incident_name: A concise name for the incident (e.g., "Structure Fire on Main St").
-        - incident_type: A general category (e.g., "Fire", "Medical Emergency", "Traffic Accident").
+        Respond in JSON format with these fields:
+        - incident_name: A concise, descriptive name for the new incident.
+        - incident_type: Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.
         - summary: A brief summary of the incident.
-        - tags: A list of 1-3 relevant keywords or tags (e.g., ["fire", "downtown", "high-rise"]).
+        - tags: A list of 2-4 relevant keywords (tags).
         """
         try:
-            if self.llm_provider == 'google':
-                response = self.llm_client.generate_content(prompt)
-                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
-                categorized_details = json.loads(clean_response)
-            else: # OpenAI or local
-                response = self.llm_client.completions.create(
-                    model=settings.openai_model_name if self.llm_provider == 'openai' else "local-model",
-                    messages=[{{"role": "user", "content": prompt}}],
-                    response_format={{"type": "json_object"}},
-                )
-                categorized_details = json.loads(response.choices[0].message.content)
-            
-            if categorized_details:
-                await self.link_eido_to_new_incident(eido["eido_id"], categorized_details)
+            response = self.llm_client.generate_content(prompt)
+            clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            return json.loads(clean_response)
         except Exception as e:
-            print(f"LLM categorization for new incident failed: {e}")
+            print(f"LLM detail generation for new incident failed: {e}")
+            return None
 
-    async def link_eido_to_new_incident(self, eido_id: str, incident_details: dict):
-        """Links an EIDO to a NEW incident in the EIDO agent."""
-        incident_details['status'] = 'open'
+    async def link_eido_to_incident(self, eido_id, incident_id=None, incident_details=None):
+        """Links an EIDO to an incident or creates a new one in the EIDO agent."""
+        payload = {"eido_id": eido_id}
+        if incident_id:
+            payload["incident_id"] = incident_id
+        if incident_details:
+            payload["incident_details"] = incident_details
+            
         try:
             async with httpx.AsyncClient() as client:
                 response = await client.post(
                     f"{self.eido_agent_url}/api/v1/incidents/link_eido",
-                    json={"eido_id": eido_id, "incident_details": incident_details},
+                    json=payload,
                     timeout=30.0
                 )
                 response.raise_for_status()
-                print(f"Successfully created new incident and linked EIDO {eido_id}.")
-                return response.json()
-        except httpx.HTTPStatusError as e:
-            print(f"Failed to link EIDO {eido_id} to new incident: {e.response.text}")
-        except httpx.RequestError as e:
-            print(f"Connection error when linking EIDO {eido_id} to new incident: {e}")
-        return None
-    
-    async def link_eido_to_existing_incident(self, eido_id: str, incident_id: str):
-        """Links an EIDO to an EXISTING incident in the EIDO agent."""
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{self.eido_agent_url}/api/v1/incidents/link_eido",
-                    json={"eido_id": eido_id, "incident_id": incident_id},
-                    timeout=30.0
-                )
-                response.raise_for_status()
-                print(f"Successfully linked EIDO {eido_id} to existing incident {incident_id}.")
-                return response.json()
-        except httpx.HTTPStatusError as e:
-            print(f"Failed to link EIDO {eido_id} to existing incident {incident_id}: {e.response.text}")
-        except httpx.RequestError as e:
-            print(f"Connection error when linking EIDO {eido_id} to existing incident {incident_id}: {e}")
-        return None
+                print(f"Successfully linked EIDO {eido_id}. Response: {response.json()}")
+        except Exception as e:
+            print(f"Failed to link EIDO {eido_id}: {e}")
 
     async def process_eido(self, eido: dict):
-        """
-        Categorizes an EIDO by matching it against active incidents or creating a new one.
-        """
+        """Processes a single uncategorized EIDO."""
         active_incidents = await self.fetch_active_incidents()
         potential_matches = self.find_potential_matches(eido, active_incidents)
 
         llm_decision = None
         if potential_matches:
-            print(f"Found {len(potential_matches)} potential matches for EIDO {eido.get('eido_id')}. Querying LLM.")
+            print(f"Found {len(potential_matches)} potential matches for EIDO {eido.get('id')}. Querying LLM.")
             llm_decision = await self.get_incident_match_from_llm(eido, potential_matches)
         
-        if llm_decision:
-            if llm_decision.get("decision") == "MATCH":
-                incident_id = llm_decision.get("incident_id")
-                print(f"LLM Decision: MATCH EIDO {eido['eido_id']} with incident {incident_id}. Reason: {llm_decision.get('reason')}")
-                await self.link_eido_to_existing_incident(eido["eido_id"], incident_id)
-                return
-            elif llm_decision.get("decision") == "NEW":
-                print(f"LLM Decision: NEW incident for EIDO {eido['eido_id']}. Reason: {llm_decision.get('reason')}")
-                incident_details = llm_decision.get("incident_details")
-                if incident_details:
-                    await self.link_eido_to_new_incident(eido["eido_id"], incident_details)
-                else:
-                    # Fallback if LLM says NEW but provides no details
-                    await self.create_new_incident_from_eido(eido) 
-                return
-
-        # Fallback: No potential matches, or LLM failed/decided it's new without providing details
-        print(f"No definitive match for EIDO {eido['eido_id']}. Creating a new incident via fallback.")
-        await self.create_new_incident_from_eido(eido)
+        if llm_decision and llm_decision.get("decision") == "MATCH":
+            incident_id = llm_decision.get("incident_id")
+            print(f"LLM Decision: MATCH EIDO {eido['id']} with incident {incident_id}.")
+            await self.link_eido_to_incident(eido_id=eido["id"], incident_id=incident_id)
+        elif llm_decision and llm_decision.get("decision") == "NEW":
+            print(f"LLM Decision: NEW incident for EIDO {eido['id']}.")
+            await self.link_eido_to_incident(eido_id=eido["id"], incident_details=llm_decision.get("incident_details"))
+        else:
+            # Fallback: No matches or LLM failed
+            print(f"No definitive match for EIDO {eido['id']}. Creating new incident via fallback.")
+            new_details = await self.create_new_incident_details(eido)
+            if new_details:
+                await self.link_eido_to_incident(eido_id=eido["id"], incident_details=new_details)
 
     async def run(self, stop_event: threading.Event):
         """Periodically checks for and categorizes uncategorized EIDOs."""
         if not self.llm_client:
-            print("Categorizer is not running because the LLM client is not configured.")
+            print("Categorizer is not running: LLM client not configured.")
             return
 
         while not stop_event.is_set():
@@ -291,21 +268,19 @@ class IncidentCategorizer:
             eidos = await self.fetch_uncategorized_eidos()
             if not eidos:
                 print("IDX Categorizer: No new EIDOs found.")
-
+            
             for eido in eidos:
-                if stop_event.is_set():
-                    break
-                print(f"IDX Categorizer: Processing EIDO {eido.get('eido_id')}")
+                if stop_event.is_set(): break
+                print(f"IDX Categorizer: Processing EIDO {eido.get('id')}")
                 await self.process_eido(eido)
             
-            # Sleep until next check
-            for _ in range(self.check_interval):
-                if stop_event.is_set():
-                    break
-                await asyncio.sleep(1)
+            await asyncio.sleep(self.check_interval)
 
 def run_categorizer(stop_event: threading.Event):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     categorizer = IncidentCategorizer()
-    loop.run_until_complete(categorizer.run(stop_event=stop_event))
+    try:
+        loop.run_until_complete(categorizer.run(stop_event=stop_event))
+    finally:
+        loop.close()

@@ -5,6 +5,7 @@ networks:
 volumes:
   postgres_data:
 
+
 services:
   nginx:
     image: nginx:alpine
@@ -51,11 +52,7 @@ services:
     networks:
       - sds_network
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U $${POSTGRES_USER:-user} -d $${POSTGRES_DB:-eido_db}",
-        ]
+      test: [ "CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-user} -d $${POSTGRES_DB:-eido_db}" ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -72,9 +69,10 @@ services:
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@eido_db:5432/${POSTGRES_DB:-eido_db}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_MODEL_NAME=${GOOGLE_MODEL_NAME:-gemini-1.5-flash-latest}
+      - GOOGLE_MODEL_NAME=${GOOGLE_MODEL_NAME:-gemini-2.5-flash-lite}
       - EIDO_AGENT_URL=http://localhost:8000
       - IDX_AGENT_URL=http://localhost:8001
+      - GEOCODING_USER_AGENT=${GEOCODING_USER_AGENT:-sdsc-orchestrator-project}
     ports:
       - "8000:8000"
       - "8001:8001"

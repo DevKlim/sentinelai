@@ -315,16 +315,15 @@
           <div class="incident-card">
             <h2>
               <i class="fas fa-receipt"></i> EIDO Reports ({{
-              incident.reports_core_data|length }})
+              incident.reports|length }})
             </h2>
             <ul class="report-list">
-              {% if incident.reports_core_data %} {% for report in
-              incident.reports_core_data %}
+              {% if incident.reports %} {% for report in incident.reports %}
               <li class="report-item">
                 <div class="report-header">
-                  <h3>Report #{{ report.report_id or loop.index }}</h3>
+                  <h3>Report #{{ loop.index }} ({{ report.id[:8] }})</h3>
                   <div class="report-actions">
-                    {% if report.original_eido_dict %}
+                    {% if report.original_eido %}
                     <button
                       class="action-btn"
                       onclick="copyJson('{{ loop.index }}')"
@@ -332,8 +331,8 @@
                       <i class="fas fa-copy"></i> Copy
                     </button>
                     <a
-                      href="data:text/json;charset=utf-8,{{ report.original_eido_dict | tojson | urlencode }}"
-                      download="eido_report_{{ report.report_id or loop.index }}.json"
+                      href="data:text/json;charset=utf-8,{{ report.original_eido | tojson | urlencode }}"
+                      download="eido_report_{{ report.id }}.json"
                       class="action-btn download-btn"
                       ><i class="fas fa-download"></i> JSON</a
                     >
@@ -349,13 +348,13 @@
                 <p><strong>Timestamp:</strong> {{ report.timestamp }}</p>
                 <p><strong>Source:</strong> {{ report.source }}</p>
                 <p><strong>Description:</strong> {{ report.description }}</p>
-                {% if report.original_eido_dict %}
+                {% if report.original_eido %}
                 <div
                   id="json-view-{{ loop.index }}"
                   class="json-view"
                   style="display: none"
                 >
-                  <pre><code id="json-code-{{ loop.index }}">{{ report.original_eido_dict | tojson(indent=2) }}</code></pre>
+                  <pre><code id="json-code-{{ loop.index }}">{{ report.original_eido | tojson(indent=2) }}</code></pre>
                 </div>
                 {% endif %}
               </li>
@@ -416,28 +415,29 @@
 
       function copyJson(id) {
         const codeElement = document.getElementById(`json-code-${id}`);
-        if (!codeElement || !codeElement.textContent) {
-          alert("No JSON content to copy.");
+        if (!codeElement) {
+          alert("Could not find JSON content to copy.");
           return;
         }
-        navigator.clipboard
-          .writeText(codeElement.textContent)
-          .then(() => {
-            alert("JSON copied to clipboard!");
-          })
-          .catch((err) => {
-            alert("Failed to copy JSON.");
-            console.error("Copy error", err);
-          });
+        // The text content needs to be decoded from what Jinja escapes.
+        // A temporary textarea is a reliable way to do this.
+        const textArea = document.createElement("textarea");
+        textArea.textContent = codeElement.textContent;
+        document.body.appendChild(textArea);
+        textArea.select();
+        try {
+          document.execCommand("copy");
+          alert("JSON copied to clipboard!");
+        } catch (err) {
+          alert("Failed to copy JSON.");
+          console.error("Copy error", err);
+        } finally {
+          document.body.removeChild(textArea);
+        }
       }
 
       async function closeIncident(incidentId) {
-        if (
-          !confirm(
-            "Are you sure you want to close this incident? This action cannot be undone."
-          )
-        )
-          return;
+        if (!confirm("Are you sure you want to close this incident?")) return;
         try {
           const response = await fetch(
             `/dashboard/api/incidents/${incidentId}/close`,
@@ -459,10 +459,7 @@
       function addTag(incidentId) {
         const input = document.getElementById("new-tag-input");
         const tag = input.value.trim();
-        if (!tag) {
-          alert("Please enter a tag.");
-          return;
-        }
+        if (!tag) return;
         fetch(`/dashboard/api/incidents/${incidentId}/tags`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -471,46 +468,40 @@
           .then((response) => {
             if (!response.ok)
               throw new Error(
-                "Failed to add tag. The backend may not support this yet."
+                "Failed to add tag. Backend support may be missing."
               );
             return response.json();
           })
-          .then((data) => {
+          .then(() => {
             alert("Tag added successfully!");
-            const tagsList = document.getElementById("tags-list");
-            const noTagsP = tagsList.querySelector("p");
-            if (noTagsP) noTagsP.remove();
-
-            const newTagEl = document.createElement("span");
-            newTagEl.className = "tag-item";
-            newTagEl.textContent = tag;
-            tagsList.appendChild(newTagEl);
-            input.value = "";
+            location.reload(); // Simple way to show the new tag
           })
-          .catch((error) => {
-            alert(error.message);
-          });
+          .catch((error) => alert(error.message));
       }
 
-      function deleteIncident(incidentId) {
+      async function deleteIncident(incidentId) {
         if (
           !confirm(
-            "Are you sure you want to permanently delete this incident and all its associated reports? This action cannot be undone."
+            "Are you sure you want to permanently delete this incident? This action cannot be undone."
           )
         )
           return;
-        fetch(`/dashboard/api/incidents/${incidentId}`, { method: "DELETE" })
-          .then((response) => {
-            if (!response.ok && response.status !== 204)
-              throw new Error(
-                "Failed to delete incident. The backend may not support this yet."
-              );
-            alert("Incident deleted successfully.");
-            window.location.href = "/dashboard/";
-          })
-          .catch((error) => {
-            alert(error.message);
-          });
+        try {
+          const response = await fetch(
+            `/dashboard/api/incidents/${incidentId}`,
+            { method: "DELETE" }
+          );
+          if (response.status !== 204) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.detail || `Server responded with ${response.status}`
+            );
+          }
+          alert("Incident deleted successfully.");
+          window.location.href = "/dashboard/";
+        } catch (error) {
+          alert(`Error deleting incident: ${error.message}`);
+        }
       }
 
       function downloadIncident(incidentId) {

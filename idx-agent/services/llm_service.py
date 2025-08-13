@@ -30,5 +30,3 @@ def get_llm_client():
         
     else:
         raise ValueError(f"Unsupported LLM provider: {settings.llm_provider}")
-
-

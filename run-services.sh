@@ -1,21 +1,17 @@
 #!/bin/bash
-set -e
 
-# Start EIDO Agent in the background
-echo "Starting EIDO Agent API on port 8000..."
-cd /app/eido-agent
-uvicorn api.main:app --host 0.0.0.0 --port 8000 &
-EIDO_PID=$!
-cd /app
+# This trap will execute on SIGINT or SIGTERM, cleaning up child processes
+trap "echo '--- Shutting down services ---'; pkill -P $$" SIGINT SIGTERM
 
-# Start IDX Agent in the background
-echo "Starting IDX Agent API on port 8001..."
-cd /app/idx-agent
-uvicorn api.main:app --host 0.0.0.0 --port 8001 &
-IDX_PID=$!
+echo "--- Starting EIDO Agent API ---"
+# Change directory into the service folder before running uvicorn
+(cd /app/eido-agent && uvicorn api.main:app --host 0.0.0.0 --port 8000) &
 
-# Wait for any process to exit
-wait -n
+echo "--- Starting IDX Agent API ---"
+# Change directory into the service folder before running uvicorn
+(cd /app/idx-agent && uvicorn api.main:app --host 0.0.0.0 --port 8001) &
 
-# Exit with status of process that exited first
-exit $?
+# Wait for all background processes to complete. The script will hang here
+# until it's terminated, at which point the trap will run.
+echo "All services are running. Press Ctrl+C to stop."
+wait
