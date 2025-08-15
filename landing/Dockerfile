@@ -1,31 +1,31 @@
-# Stage 1: Install dependencies
-# This stage installs dependencies and resolves conflicts.
-FROM node:18-alpine AS deps
+# sdsc-orchestrator/landing/Dockerfile
+# Stage 1: Build the Next.js application
+FROM node:18-alpine AS builder
+
+# Set the working directory
 WORKDIR /app
-COPY package.json package-lock.json* ./
-# Use --legacy-peer-deps to resolve conflicts. This might update package-lock.json.
+
+# Copy package files and install dependencies
+# This leverages Docker's layer caching
+COPY package*.json ./
 RUN npm install --legacy-peer-deps
 
-# Stage 2: Build the application
-# This stage builds the Next.js app using the installed dependencies.
-FROM node:18-alpine AS builder
-WORKDIR /app
-# First, copy the entire source code.
+# Copy the rest of the application source code
 COPY . .
-# Then, copy the installed node_modules from the 'deps' stage.
-COPY --from=deps /app/node_modules ./node_modules
-# Crucially, overwrite the original package-lock.json with the (potentially updated)
-# one from the 'deps' stage to ensure consistency.
-COPY --from=deps /app/package-lock.json ./
-# Now, run the build.
+
+# Build the application for production (this creates the 'out' folder)
+# The output: "export" in next.config.mjs ensures this command generates a static site in the 'out' directory.
 RUN npm run build
 
-# Stage 3: Production image
-# This is the final, small, and optimized image.
+# Stage 2: Production image with Nginx
 FROM nginx:alpine
-# Copy the static output from the builder stage.
+
+# Copy the static output from the builder stage to the Nginx html directory
 COPY --from=builder /app/out /usr/share/nginx/html
-# Copy the custom Nginx configuration.
+
+# Copy the custom Nginx configuration
 COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+# Expose port 80 and start Nginx
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]

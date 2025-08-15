@@ -4,32 +4,33 @@
 
 @layer base {
   :root {
-    --background: 220 40% 5%; /* Dark Navy Blue */
-    --foreground: 0 0% 100%; /* White */
+    --background: 45 100% 50%; /* Honey Yellow */
+    --foreground: 0 0% 0%; /* Black */
 
-    --card: 220 30% 10%;
-    --card-foreground: 0 0% 98%;
-    --popover: 220 40% 5%;
-    --popover-foreground: 0 0% 98%;
+    --card: 45 100% 50%;
+    --card-foreground: 0 0% 0%;
 
-    --primary: 210 100% 50%; /* Bright Blue */
-    --primary-foreground: 0 0% 100%;
+    --popover: 45 100% 50%;
+    --popover-foreground: 0 0% 0%;
 
-    --secondary: 220 30% 15%;
-    --secondary-foreground: 0 0% 98%;
+    --primary: 0 0% 0%; /* Black */
+    --primary-foreground: 45 100% 50%; /* Honey Yellow */
 
-    --muted: 220 20% 30%;
-    --muted-foreground: 220 10% 65%;
+    --secondary: 45 100% 95%; /* Very light yellow/off-white */
+    --secondary-foreground: 0 0% 10%; /* Dark grey */
 
-    --accent: 220 30% 15%;
-    --accent-foreground: 0 0% 98%;
+    --muted: 45 100% 90%; /* Light yellow */
+    --muted-foreground: 0 0% 25%; /* Mid grey */
+
+    --accent: 45 100% 95%; /* Very light yellow/off-white */
+    --accent-foreground: 0 0% 10%;
 
     --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
+    --destructive-foreground: 0 0% 0%; /* Black text on red */
 
-    --border: 220 30% 20%;
-    --input: 220 30% 15%;
-    --ring: 210 100% 50%;
+    --border: 0 0% 15%; /* Dark grey border */
+    --input: 0 0% 15%; /* Dark grey input */
+    --ring: 0 0% 0%; /* Black ring */
 
     --radius: 0.5rem;
   }
@@ -43,17 +44,18 @@
     @apply bg-background text-foreground;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    /* A subtle gradient from a lighter yellow to the main honey yellow */
     background-image: radial-gradient(
       circle at top,
-      hsl(220 30% 12%) 0%,
-      hsl(var(--background)) 35%
+      hsl(45 100% 60%) 0%,
+      hsl(var(--background)) 40%
     );
   }
   .text-shadow {
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
   }
   .text-shadow-lg {
-    text-shadow: 0 4px 10px rgba(0, 0, 0, 0.7);
+    text-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
   }
 }
 
@@ -74,8 +76,8 @@
   }
 
   .text-glow {
-    text-shadow: 0 0 5px rgba(255, 255, 255, 0.6),
-      0 0 10px rgba(80, 150, 255, 0.5), 0 0 15px rgba(80, 150, 255, 0.4);
+    /* A subtle white glow that might work on yellow */
+    text-shadow: 0 0 8px hsl(0 0% 100% / 0.5);
   }
 
   /* This animation drives the single scrolling text component */

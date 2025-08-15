@@ -16,12 +16,32 @@ import {
   useProgress,
   useGLTF,
 } from "@react-three/drei";
-import { Group } from "three";
-import RequestDemoModal from "../RequestDemoModal";
-import InfoModal from "../InfoModal";
+import { Group, SpotLight } from "three";
 
-const Model = ({ url, ...props }: { url: string; [key: string]: any }) => {
+const Model = ({
+  url,
+  color,
+  ...props
+}: {
+  url: string;
+  color: string;
+  [key: string]: any;
+}) => {
   const { scene } = useGLTF(url);
+  useEffect(() => {
+    const material = new THREE.MeshStandardMaterial({
+      color: color,
+      roughness: 0.4,
+      metalness: 0.5,
+    });
+    if (scene) {
+      scene.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          child.material = material;
+        }
+      });
+    }
+  }, [scene, color]);
   return <primitive object={scene} {...props} />;
 };
 
@@ -38,49 +58,107 @@ const ModelFallback = (props: any) => {
 const items = [
   {
     position: new THREE.Vector3(0, 0, 0),
+    rotation: [0, 0, 0] as [number, number, number],
+    color: "#ffc107", // Honey Yellow for Dashboard
     path: "/dashboard/",
     label: "Dashboard",
-    modelUrl: "/ai_brain.glb",
+    modelUrl: "/models-dashboard/dashboard.glb",
     action: undefined as string | undefined,
+  },
+  {
+    position: new THREE.Vector3(0, 0, 0),
+    rotation: [0, (240 * Math.PI) / 180, 0] as [number, number, number], // Rotated 120 deg to face front
+    color: "#6c757d", // A muted grey from a common palette
+    path: undefined as string | undefined,
+    label: "Request Demo",
+    modelUrl: "/models-contact/contact.glb",
+    action: "requestDemo" as string | undefined,
+  },
+  {
+    position: new THREE.Vector3(0, 0, 0),
+    rotation: [0, (120 * Math.PI) / 180, 0] as [number, number, number], // Rotated 240 deg to face front
+    color: "#f0ad4e", // A warmer orange/yellow
+    path: undefined as string | undefined,
+    label: "Info",
+    modelUrl: "/models-info/info.glb",
+    action: "info" as string | undefined,
   },
 ];
 
 const CarouselContent = ({ selectedIndex }: { selectedIndex: number }) => {
   const groupRef = useRef<Group>(null);
+  const spotLightRef = useRef<SpotLight>(null!);
+  const radius = 5; // Distance of items from the center
+
+  // A helper object to act as the spotlight's target
+  const spotLightTarget = new THREE.Object3D();
 
   useFrame((state) => {
     if (groupRef.current) {
+      // Calculate the target rotation based on the selected index
       const targetRotation = -selectedIndex * ((Math.PI * 2) / items.length);
-      let currentRotation = groupRef.current.rotation.y;
 
-      const twoPi = Math.PI * 2;
-      let diff = (targetRotation - currentRotation) % twoPi;
-      if (diff > Math.PI) {
-        diff -= twoPi;
-      } else if (diff < -Math.PI) {
-        diff += twoPi;
-      }
-
+      // Smoothly interpolate the rotation of the whole carousel
       groupRef.current.rotation.y = THREE.MathUtils.lerp(
         groupRef.current.rotation.y,
-        groupRef.current.rotation.y + diff,
+        targetRotation,
         0.1
       );
+
+      // Get the world position of the currently selected item
+      const selectedItem = groupRef.current.children[selectedIndex];
+      if (selectedItem) {
+        const worldPosition = new THREE.Vector3();
+        selectedItem.getWorldPosition(worldPosition);
+
+        // Update spotlight target to point at the item
+        spotLightTarget.position.copy(worldPosition);
+        spotLightRef.current.target = spotLightTarget;
+
+        // Smoothly move the spotlight to be above the item
+        spotLightRef.current.position.lerp(
+          new THREE.Vector3(worldPosition.x, 5, worldPosition.z),
+          0.1
+        );
+      }
     }
-    state.camera.position.lerp(new THREE.Vector3(0, 2, 8), 0.1);
+    // Smoothly move camera
+    state.camera.position.lerp(new THREE.Vector3(0, 0.75, 10), 0.05);
     state.camera.lookAt(0, 0, 0);
   });
 
   return (
-    <group ref={groupRef}>
-      {items.map((item, index) => (
-        <group key={index} position={item.position}>
-          <Suspense fallback={<ModelFallback scale={1.5} />}>
-            <Model url={item.modelUrl} scale={1.5} />
-          </Suspense>
-        </group>
-      ))}
-    </group>
+    <>
+      {/* Add the spotlight target to the scene so its matrix gets updated */}
+      <primitive object={spotLightTarget} />
+      <spotLight
+        ref={spotLightRef}
+        position={[0, 5, radius]} // Initial position
+        angle={Math.PI / 4}
+        penumbra={0.25}
+        intensity={15} // Bright to make colors pop
+        castShadow
+        color="#fff5d6" // Light honey yellow, from palette
+      />
+      <group ref={groupRef}>
+        {items.map((item, index) => {
+          const angle = index * ((Math.PI * 2) / items.length);
+          const x = Math.sin(angle) * radius;
+          const z = Math.cos(angle) * radius;
+
+          return (
+            <group key={index} position={[x, 0, z]} rotation={[0, -angle, 0]}>
+              <Model
+                url={item.modelUrl}
+                color={item.color}
+                scale={1.5}
+                rotation={item.rotation}
+              />
+            </group>
+          );
+        })}
+      </group>
+    </>
   );
 };
 
@@ -99,7 +177,7 @@ const LoadingScreen = () => {
     <div className="absolute inset-0 bg-background z-50 flex items-center justify-center transition-opacity duration-1000">
       <div className="text-center">
         <div className="w-24 h-24 border-4 border-primary border-t-transparent rounded-full animate-spin-slow mx-auto mb-4"></div>
-        <p className="text-white text-2xl font-unna">
+        <p className="text-foreground text-2xl font-unna">
           Initializing SentinelAI Interface...
         </p>
       </div>
@@ -107,14 +185,12 @@ const LoadingScreen = () => {
   );
 };
 
-// This is now the ONLY scrolling text component.
-// Its font size is doubled using Tailwind's arbitrary values (`text-[8rem]`).
 const ScrollingText = () => {
   const textContent =
     "SENTINEL AI: TRANSFORMING CHAOS INTO CLARITY ◆ REAL-TIME INTELLIGENCE FOR FIRST RESPONDERS ◆ SAVING LIVES WITH DATA-DRIVEN INSIGHTS ◆";
   return (
     <div className="absolute bottom-10 left-0 w-full overflow-hidden pointer-events-none">
-      <div className="text-white/80 font-unna text-[8rem] leading-none animate-marquee whitespace-nowrap text-glow">
+      <div className="text-black/80 font-unna text-[8rem] leading-none animate-marquee whitespace-nowrap">
         <span>{textContent}</span>
         <span>{textContent}</span>
       </div>
@@ -130,31 +206,6 @@ const Carousel = ({
   setSelectedIndex: Dispatch<SetStateAction<number>>;
 }) => {
   const [loading, setLoading] = useState(true);
-  const [showDemoModal, setShowDemoModal] = useState(false);
-  const [showInfoModal, setShowInfoModal] = useState(false);
-  const actionTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-
-  useEffect(() => {
-    if (actionTimeoutRef.current) {
-      clearTimeout(actionTimeoutRef.current);
-    }
-    actionTimeoutRef.current = setTimeout(() => {
-      const item = items[selectedIndex];
-      if (item.path) {
-        window.location.href = item.path;
-      } else if (item.action === "requestDemo") {
-        setShowDemoModal(true);
-      } else if (item.action === "info") {
-        setShowInfoModal(true);
-      }
-    }, 800);
-
-    return () => {
-      if (actionTimeoutRef.current) {
-        clearTimeout(actionTimeoutRef.current);
-      }
-    };
-  }, [selectedIndex]);
 
   const handleNext = () => {
     setSelectedIndex((prev) => (prev + 1) % items.length);
@@ -220,6 +271,7 @@ const Carousel = ({
           <directionalLight position={[0, 10, 5]} intensity={1.5} />
           <Suspense fallback={<Loader onLoaded={() => setLoading(false)} />}>
             <CarouselContent selectedIndex={selectedIndex} />
+            <ModelFallback />
           </Suspense>
           <OrbitControls
             enableZoom={false}
@@ -229,10 +281,6 @@ const Carousel = ({
           <Preload all />
         </Canvas>
         <ScrollingText />
-        {showDemoModal && (
-          <RequestDemoModal onClose={() => setShowDemoModal(false)} />
-        )}
-        {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
       </div>
     </div>
   );

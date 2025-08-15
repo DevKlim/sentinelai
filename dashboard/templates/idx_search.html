@@ -22,7 +22,7 @@
         font-family: "Inter", sans-serif;
         background: #000000;
         min-height: 100vh;
-        color: #ffffff;
+        color: #e0e0e0;
       }
 
       .container {
@@ -39,19 +39,19 @@
       .header h1 {
         font-size: 2.5rem;
         font-weight: 700;
-        color: #ffffff;
+        color: #ffc107;
         margin-bottom: 0.5rem;
         letter-spacing: 1px;
       }
 
       .header p {
-        color: #cccccc;
+        color: #aaaaaa;
         font-size: 1.1rem;
         font-weight: 300;
       }
 
       .search-container {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 3rem;
@@ -74,7 +74,7 @@
       }
 
       .search-container:hover::before {
-        border-color: #ffffff;
+        border-color: #ffc107;
       }
 
       .search-section {
@@ -84,7 +84,7 @@
       .section-title {
         font-size: 1.3rem;
         font-weight: 600;
-        color: #ffffff;
+        color: #e0e0e0;
         margin-bottom: 1rem;
         display: flex;
         align-items: center;
@@ -103,19 +103,19 @@
       .search-input {
         flex: 1;
         padding: 1rem 1.5rem;
-        border: 1px solid #333333;
+        border: 1px solid #444444;
         border-radius: 8px;
         font-size: 1rem;
         font-family: inherit;
         transition: all 0.3s ease;
-        background: #1a1a1a;
-        color: #ffffff;
+        background: #222222;
+        color: #e0e0e0;
       }
 
       .search-input:focus {
         outline: none;
-        border-color: #ffffff;
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.1);
+        border-color: #ffc107;
+        box-shadow: 0 0 0 2px rgba(255, 193, 7, 0.2);
       }
 
       .btn {
@@ -123,7 +123,7 @@
         align-items: center;
         justify-content: center;
         padding: 1rem 2rem;
-        border: 1px solid #333333;
+        border: 1px solid #cccccc;
         border-radius: 8px;
         font-size: 1rem;
         font-weight: 600;
@@ -131,30 +131,29 @@
         cursor: pointer;
         transition: all 0.3s ease;
         font-family: inherit;
-        background: #1a1a1a;
-        color: #ffffff;
       }
 
       .btn-primary {
-        background: #ffffff;
+        background: #ffc107;
         color: #000000;
-        border-color: #ffffff;
+        border-color: #ffc107;
       }
 
       .btn-primary:hover {
         transform: translateY(-2px);
-        box-shadow: 0 5px 15px rgba(255, 255, 255, 0.3);
+        box-shadow: 0 5px 15px rgba(255, 193, 7, 0.2);
+        background: #ffda6a;
       }
 
       .btn-secondary {
-        background: #1a1a1a;
-        color: #ffffff;
-        border-color: #333333;
+        background: #333333;
+        color: #e0e0e0;
+        border-color: #555555;
       }
 
       .btn-secondary:hover {
-        border-color: #ffffff;
-        background: #222222;
+        border-color: #ffc107;
+        background: #444444;
       }
 
       .btn i {
@@ -175,29 +174,29 @@
 
       .filter-label {
         font-weight: 500;
-        color: #ffffff;
+        color: #e0e0e0;
         margin-bottom: 0.5rem;
         font-size: 0.9rem;
       }
 
       .filter-select {
         padding: 0.75rem;
-        border: 1px solid #333333;
+        border: 1px solid #444444;
         border-radius: 8px;
         font-size: 0.9rem;
         font-family: inherit;
         transition: all 0.3s ease;
-        background: #1a1a1a;
-        color: #ffffff;
+        background: #222222;
+        color: #e0e0e0;
       }
 
       .filter-select:focus {
         outline: none;
-        border-color: #ffffff;
+        border-color: #ffc107;
       }
 
       .results-container {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 2rem;
@@ -220,7 +219,7 @@
       }
 
       .results-container:hover::before {
-        border-color: #ffffff;
+        border-color: #ffc107;
       }
 
       .results-header {
@@ -234,7 +233,7 @@
 
       .results-count {
         font-weight: 600;
-        color: #ffffff;
+        color: #e0e0e0;
       }
 
       .results-actions {
@@ -243,8 +242,8 @@
       }
 
       .incident-card {
-        background: #1a1a1a;
-        border: 1px solid #333333;
+        background: #222222;
+        border: 1px solid #444444;
         border-radius: 8px;
         padding: 1.5rem;
         margin-bottom: 1.5rem;
@@ -267,12 +266,12 @@
       }
 
       .incident-card:hover::before {
-        border-color: #ffffff;
+        border-color: #ffc107;
         transform: scale(1.01);
       }
 
       .incident-card:hover {
-        background: #222222;
+        background: #333333;
         transform: translateY(-2px);
       }
 
@@ -285,7 +284,7 @@
       }
 
       .incident-card.low-priority {
-        border-left: 4px solid #ffffff;
+        border-left: 4px solid #ffc107;
       }
 
       .incident-header {
@@ -306,7 +305,7 @@
         display: flex;
         gap: 1rem;
         font-size: 0.9rem;
-        color: #cccccc;
+        color: #aaaaaa;
         margin-bottom: 1rem;
       }
 
@@ -338,8 +337,8 @@
       }
 
       .priority-low {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+        background: rgba(255, 193, 7, 0.2);
+        color: #b37400;
       }
 
       .incident-description {
@@ -350,7 +349,7 @@
 
       .incident-location {
         font-weight: 500;
-        color: #ffffff;
+        color: #e0e0e0;
         margin-bottom: 0.5rem;
       }
 
@@ -368,14 +367,14 @@
 
       .detail-item i {
         margin-right: 0.5rem;
-        color: #ffffff;
+        color: #ffc107;
         width: 16px;
       }
 
       .loading {
         text-align: center;
         padding: 3rem;
-        color: #ffffff;
+        color: #e0e0e0;
       }
 
       .loading i {
@@ -396,32 +395,32 @@
       .no-results {
         text-align: center;
         padding: 3rem;
-        color: #cccccc;
+        color: #aaaaaa;
       }
 
       .no-results i {
         font-size: 3rem;
-        color: #333333;
+        color: #444444;
         margin-bottom: 1rem;
       }
 
       .back-link {
         display: inline-flex;
         align-items: center;
-        color: #ffffff;
+        color: #e0e0e0;
         text-decoration: none;
         font-weight: 500;
         margin-bottom: 2rem;
         transition: all 0.3s ease;
         padding: 0.75rem 1.5rem;
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 8px;
       }
 
       .back-link:hover {
-        border-color: #ffffff;
-        background: #1a1a1a;
+        border-color: #ffc107;
+        background: #222222;
         transform: translateX(-5px);
       }
 

@@ -27,7 +27,7 @@
       body {
         font-family: "Inter", sans-serif;
         background: #000000;
-        color: #ffffff;
+        color: #e0e0e0;
         min-height: 100vh;
         line-height: 1.6;
       }
@@ -62,7 +62,7 @@
       .logo h1 {
         font-size: 1.8rem;
         font-weight: 700;
-        color: #ffffff;
+        color: #ffc107;
         margin-bottom: 0.5rem;
         letter-spacing: 1px;
       }
@@ -97,8 +97,8 @@
       .nav-link:hover,
       .nav-link.active {
         background: #1a1a1a;
-        color: #ffffff;
-        border: 1px solid #ffffff;
+        color: #ffc107;
+        border: 1px solid #ffc107;
         transform: translateX(5px);
       }
 
@@ -106,14 +106,14 @@
         margin-right: 12px;
         width: 20px;
         text-align: center;
-        color: #ffffff;
+        color: #ffc107;
       }
 
       .status-indicator {
         width: 8px;
         height: 8px;
         border-radius: 50%;
-        background: #ffffff;
+        background: #ffc107;
         margin-left: auto;
         animation: pulse 2s infinite;
       }
@@ -131,7 +131,7 @@
       }
 
       .header {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 2rem;
@@ -160,7 +160,7 @@
       }
 
       .stat-card {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 2rem;
@@ -183,12 +183,12 @@
       }
 
       .stat-card:hover::before {
-        border-color: #ffffff;
+        border-color: #ffc107;
         transform: scale(1.02);
       }
 
       .stat-card:hover {
-        background: #1a1a1a;
+        background: #2a2a2a;
         transform: translateY(-2px);
       }
 
@@ -208,12 +208,12 @@
         margin-right: 1rem;
         font-size: 1.5rem;
         color: #000000;
-        background: #ffffff;
+        background: #ffc107;
       }
 
       .stat-title {
         font-weight: 600;
-        color: #ffffff;
+        color: #e0e0e0;
         font-size: 1.1rem;
       }
 
@@ -226,12 +226,12 @@
 
       .stat-change {
         font-size: 0.9rem;
-        color: #ffffff;
+        color: #aaaaaa;
         font-weight: 500;
       }
 
       .stat-change.negative {
-        color: #cccccc;
+        color: #d9534f;
       }
 
       .interface-grid {
@@ -242,7 +242,7 @@
       }
 
       .interface-card {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 2rem;
@@ -269,12 +269,12 @@
       }
 
       .interface-card:hover::before {
-        border-color: #ffffff;
+        border-color: #ffc107;
         transform: scale(1.02);
       }
 
       .interface-card:hover {
-        background: #1a1a1a;
+        background: #2a2a2a;
         transform: translateY(-5px);
       }
 
@@ -288,25 +288,25 @@
         margin: 0 auto 1rem;
         font-size: 2rem;
         color: #000000;
-        background: #ffffff;
+        background: #ffc107;
       }
 
       .interface-title {
         font-weight: 600;
-        color: #ffffff;
+        color: #e0e0e0;
         font-size: 1.2rem;
         margin-bottom: 0.5rem;
       }
 
       .interface-description {
-        color: #cccccc;
+        color: #aaaaaa;
         font-size: 0.9rem;
         line-height: 1.5;
         font-weight: 300;
       }
 
       .analytics-section {
-        background: #111111;
+        background: #1a1a1a;
         border: 1px solid #333333;
         border-radius: 12px;
         padding: 2rem;
@@ -328,8 +328,8 @@
 
       .refresh-btn {
         background: #333333;
-        border: none;
-        color: #ffffff;
+        border: 1px solid #555555;
+        color: #e0e0e0;
         padding: 0.5rem 1rem;
         border-radius: 6px;
         cursor: pointer;
@@ -359,8 +359,8 @@
       }
 
       .incident-item {
-        background: #1a1a1a;
-        border: 1px solid #333333;
+        background: #222222;
+        border: 1px solid #444444;
         border-radius: 8px;
         padding: 1rem;
         margin-bottom: 1rem;
@@ -371,8 +371,8 @@
       }
 
       .incident-item:hover {
-        background: #222222;
-        border-color: #ffffff;
+        background: #333333;
+        border-color: #ffc107;
       }
 
       .incident-header {
@@ -395,37 +395,37 @@
       }
 
       .status-open {
-        background: #ffffff;
+        background: #ffc107;
         color: #000000;
       }
 
       .status-closed {
         background: #cccccc;
-        color: #000000;
+        color: #333333;
       }
 
       .incident-details {
-        color: #cccccc;
+        color: #aaaaaa;
         font-size: 0.9rem;
       }
 
       .loading {
         text-align: center;
         padding: 2rem;
-        color: #cccccc;
+        color: #aaaaaa;
       }
 
       .error {
-        background: #ffffff;
-        color: #000000;
+        background: #d9534f;
+        color: #ffffff;
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 1rem;
       }
 
       .success {
-        background: #ffffff;
-        color: #000000;
+        background: #5cb85c;
+        color: #ffffff;
         padding: 1rem;
         border-radius: 8px;
         margin-bottom: 1rem;
@@ -831,23 +831,19 @@
 
             statusHtml += `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: ${
-                          isOnline ? "#1a1a1a" : "#ffffff"
+                          isOnline ? "#2a2a2a" : "rgba(255, 193, 7, 0.3)"
                         }; border-radius: 8px; margin-bottom: 1rem;">
                             <div>
-                                <strong style="color: ${
-                                  isOnline ? "#ffffff" : "#000000"
-                                }">${service.name}</strong>
-                                <div style="color: ${
-                                  isOnline ? "#cccccc" : "#666666"
-                                }; font-size: 0.9rem;">Response: ${
-              service.response_time
-                ? service.response_time.toFixed(3) + "s"
-                : "N/A"
-            }</div>
+                                <strong style="color: #ffffff;">${
+                                  service.name
+                                }</strong>
+                                <div style="color: #aaaaaa; font-size: 0.9rem;">Response: ${
+                                  service.response_time
+                                    ? service.response_time.toFixed(3) + "s"
+                                    : "N/A"
+                                }</div>
                             </div>
-                            <div style="color: ${
-                              isOnline ? "#ffffff" : "#000000"
-                            }">
+                            <div style="color: #ffffff;">
                                 <i class="fas fa-${
                                   isOnline ? "check-circle" : "times-circle"
                                 }"></i>
@@ -895,8 +891,8 @@
                 {
                   label: "Daily Incidents",
                   data: data.daily_counts.counts,
-                  borderColor: "#ffffff",
-                  backgroundColor: "rgba(255, 255, 255, 0.1)",
+                  borderColor: "#ffc107",
+                  backgroundColor: "rgba(255, 193, 7, 0.2)",
                   tension: 0.4,
                   fill: true,
                 },
@@ -908,14 +904,14 @@
               plugins: {
                 legend: {
                   labels: {
-                    color: "#ffffff",
+                    color: "#e0e0e0",
                   },
                 },
               },
               scales: {
                 x: {
                   ticks: {
-                    color: "#ffffff",
+                    color: "#e0e0e0",
                   },
                   grid: {
                     color: "#333333",
@@ -923,7 +919,7 @@
                 },
                 y: {
                   ticks: {
-                    color: "#ffffff",
+                    color: "#e0e0e0",
                   },
                   grid: {
                     color: "#333333",
@@ -958,14 +954,14 @@
                 {
                   data: values,
                   backgroundColor: [
-                    "#ffffff",
-                    "#cccccc",
-                    "#999999",
-                    "#666666",
-                    "#333333",
-                    "#000000",
-                    "#e6e6e6",
-                    "#b3b3b3",
+                    "#ffc107",
+                    "#ffda6a",
+                    "#f0ad4e",
+                    "#d9534f",
+                    "#5cb85c",
+                    "#5bc0de",
+                    "#337ab7",
+                    "#777777",
                   ],
                 },
               ],
@@ -977,7 +973,7 @@
                 legend: {
                   position: "right",
                   labels: {
-                    color: "#ffffff",
+                    color: "#e0e0e0",
                   },
                 },
               },
@@ -998,21 +994,21 @@
           const container = document.getElementById("response-analytics");
           container.innerHTML = `
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.average_response_time_minutes}</div>
-                            <div style="color: #cccccc;">Average (minutes)</div>
+                            <div style="color: #aaaaaa;">Average (minutes)</div>
                         </div>
-                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.min_response_time_minutes}</div>
-                            <div style="color: #cccccc;">Fastest (minutes)</div>
+                            <div style="color: #aaaaaa;">Fastest (minutes)</div>
                         </div>
-                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.max_response_time_minutes}</div>
-                            <div style="color: #cccccc;">Slowest (minutes)</div>
+                            <div style="color: #aaaaaa;">Slowest (minutes)</div>
                         </div>
-                        <div style="background: #1a1a1a; padding: 1rem; border-radius: 8px; text-align: center;">
+                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
                             <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.total_incidents_analyzed}</div>
-                            <div style="color: #cccccc;">Total Analyzed</div>
+                            <div style="color: #aaaaaa;">Total Analyzed</div>
                         </div>
                     </div>
                 `;
@@ -1031,9 +1027,12 @@
           if (!map) {
             map = L.map(container).setView([32.7157, -117.1611], 10); // Default to San Diego
 
-            L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-              attribution: "© OpenStreetMap contributors",
-            }).addTo(map);
+            L.tileLayer(
+              "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+              {
+                attribution: "© OpenStreetMap contributors, © CartoDB",
+              }
+            ).addTo(map);
           } else {
             map.eachLayer((layer) => {
               if (layer instanceof L.Marker) {

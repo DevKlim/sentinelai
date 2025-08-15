@@ -13,12 +13,12 @@ const nextConfig = {
   webpack: (config) => {
     config.module.rules.push({
       test: /\.(glb|gltf)$/i,
-      type: 'asset/resource',
+      type: "asset/resource",
       generator: {
-        filename: 'static/media/[name].[hash][ext]',
+        filename: "static/media/[name].[hash][ext]",
       },
-    })
-    return config
+    });
+    return config;
   },
 };
 

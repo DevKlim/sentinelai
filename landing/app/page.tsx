@@ -3,6 +3,8 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Shield } from "lucide-react";
 import Carousel from "@/components/canvas/Carousel";
+import RequestDemoModal from "@/components/RequestDemoModal";
+import InfoModal from "@/components/InfoModal";
 
 // These items correspond to the 3D models and their associated actions/links.
 const items = [
@@ -13,6 +15,8 @@ const items = [
 
 const LandingPage = () => {
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [showDemoModal, setShowDemoModal] = useState(false);
+  const [showInfoModal, setShowInfoModal] = useState(false);
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans flex flex-col overflow-x-hidden">
@@ -42,12 +46,17 @@ const LandingPage = () => {
                       window.location.href = item.path;
                     } else {
                       setSelectedIndex(index);
+                      if (item.action === "requestDemo") {
+                        setShowDemoModal(true);
+                      } else if (item.action === "info") {
+                        setShowInfoModal(true);
+                      }
                     }
                   }}
                   className={`px-6 py-2 text-base rounded-full transition-all duration-300 focus:outline-none ${
                     selectedIndex === index
-                      ? "bg-primary/80 text-white font-semibold"
-                      : "text-gray-400 hover:text-white"
+                      ? "bg-primary text-primary-foreground font-semibold"
+                      : "text-white/70 hover:text-white"
                   }`}
                 >
                   {item.label}
@@ -69,6 +78,10 @@ const LandingPage = () => {
           </section>
         </main>
       </div>
+      {showDemoModal && (
+        <RequestDemoModal onClose={() => setShowDemoModal(false)} />
+      )}
+      {showInfoModal && <InfoModal onClose={() => setShowInfoModal(false)} />}
     </div>
   );
 };
