@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 # This trap will execute on SIGINT or SIGTERM, cleaning up child processes
 trap "echo '--- Shutting down services ---'; pkill -P $$" SIGINT SIGTERM
