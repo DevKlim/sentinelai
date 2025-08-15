@@ -3,11 +3,12 @@
 import * as THREE from "three";
 import React, {
   useRef,
-  useState,
   useEffect,
   Suspense,
   Dispatch,
   SetStateAction,
+  useState,
+  useCallback,
 } from "react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import {
@@ -17,6 +18,18 @@ import {
   useGLTF,
 } from "@react-three/drei";
 import { Group, SpotLight } from "three";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+
+// Type definition for a carousel item
+interface CarouselItem {
+  position: THREE.Vector3;
+  rotation: [number, number, number];
+  color: string;
+  path?: string;
+  label: string;
+  modelUrl: string;
+  action?: string;
+}
 
 const Model = ({
   url,
@@ -45,100 +58,65 @@ const Model = ({
   return <primitive object={scene} {...props} />;
 };
 
-// Fallback component for when GLTF fails to load
-const ModelFallback = (props: any) => {
-  return (
-    <mesh {...props}>
-      <boxGeometry args={[1, 1, 1]} />
-      <meshStandardMaterial color="orange" />
-    </mesh>
-  );
-};
-
-const items = [
-  {
-    position: new THREE.Vector3(0, 0, 0),
-    rotation: [0, 0, 0] as [number, number, number],
-    color: "#ffc107", // Honey Yellow for Dashboard
-    path: "/dashboard/",
-    label: "Dashboard",
-    modelUrl: "/models-dashboard/dashboard.glb",
-    action: undefined as string | undefined,
-  },
-  {
-    position: new THREE.Vector3(0, 0, 0),
-    rotation: [0, (240 * Math.PI) / 180, 0] as [number, number, number], // Rotated 120 deg to face front
-    color: "#6c757d", // A muted grey from a common palette
-    path: undefined as string | undefined,
-    label: "Request Demo",
-    modelUrl: "/models-contact/contact.glb",
-    action: "requestDemo" as string | undefined,
-  },
-  {
-    position: new THREE.Vector3(0, 0, 0),
-    rotation: [0, (120 * Math.PI) / 180, 0] as [number, number, number], // Rotated 240 deg to face front
-    color: "#f0ad4e", // A warmer orange/yellow
-    path: undefined as string | undefined,
-    label: "Info",
-    modelUrl: "/models-info/info.glb",
-    action: "info" as string | undefined,
-  },
-];
-
-const CarouselContent = ({ selectedIndex }: { selectedIndex: number }) => {
+const CarouselContent = ({
+  items,
+  rotationCounter,
+}: {
+  items: CarouselItem[];
+  rotationCounter: React.MutableRefObject<number>;
+}) => {
   const groupRef = useRef<Group>(null);
   const spotLightRef = useRef<SpotLight>(null!);
-  const radius = 5; // Distance of items from the center
+  const radius = 5;
 
-  // A helper object to act as the spotlight's target
-  const spotLightTarget = new THREE.Object3D();
+  const spotLightTarget = React.useMemo(() => new THREE.Object3D(), []);
 
   useFrame((state) => {
     if (groupRef.current) {
-      // Calculate the target rotation based on the selected index
-      const targetRotation = -selectedIndex * ((Math.PI * 2) / items.length);
+      const targetRotation =
+        -rotationCounter.current * ((Math.PI * 2) / items.length);
 
-      // Smoothly interpolate the rotation of the whole carousel
       groupRef.current.rotation.y = THREE.MathUtils.lerp(
         groupRef.current.rotation.y,
         targetRotation,
         0.1
       );
 
-      // Get the world position of the currently selected item
+      const selectedIndex =
+        ((rotationCounter.current % items.length) + items.length) %
+        items.length;
       const selectedItem = groupRef.current.children[selectedIndex];
+
       if (selectedItem) {
         const worldPosition = new THREE.Vector3();
         selectedItem.getWorldPosition(worldPosition);
 
-        // Update spotlight target to point at the item
         spotLightTarget.position.copy(worldPosition);
-        spotLightRef.current.target = spotLightTarget;
+        if (spotLightRef.current.target !== spotLightTarget) {
+          spotLightRef.current.target = spotLightTarget;
+        }
 
-        // Smoothly move the spotlight to be above the item
         spotLightRef.current.position.lerp(
           new THREE.Vector3(worldPosition.x, 5, worldPosition.z),
           0.1
         );
       }
     }
-    // Smoothly move camera
     state.camera.position.lerp(new THREE.Vector3(0, 0.75, 10), 0.05);
     state.camera.lookAt(0, 0, 0);
   });
 
   return (
     <>
-      {/* Add the spotlight target to the scene so its matrix gets updated */}
       <primitive object={spotLightTarget} />
       <spotLight
         ref={spotLightRef}
-        position={[0, 5, radius]} // Initial position
+        position={[0, 5, radius]}
         angle={Math.PI / 4}
         penumbra={0.25}
-        intensity={15} // Bright to make colors pop
+        intensity={15}
         castShadow
-        color="#fff5d6" // Light honey yellow, from palette
+        color="#fff5d6"
       />
       <group ref={groupRef}>
         {items.map((item, index) => {
@@ -172,18 +150,16 @@ const Loader = ({ onLoaded }: { onLoaded: () => void }) => {
   return null;
 };
 
-const LoadingScreen = () => {
-  return (
-    <div className="absolute inset-0 bg-background z-50 flex items-center justify-center transition-opacity duration-1000">
-      <div className="text-center">
-        <div className="w-24 h-24 border-4 border-primary border-t-transparent rounded-full animate-spin-slow mx-auto mb-4"></div>
-        <p className="text-foreground text-2xl font-unna">
-          Initializing SentinelAI Interface...
-        </p>
-      </div>
+const LoadingScreen = () => (
+  <div className="absolute inset-0 bg-background z-50 flex items-center justify-center">
+    <div className="text-center">
+      <div className="w-24 h-24 border-4 border-primary border-t-transparent rounded-full animate-spin-slow mx-auto mb-4"></div>
+      <p className="text-foreground text-2xl font-unna">
+        Initializing SentinelAI Interface...
+      </p>
     </div>
-  );
-};
+  </div>
+);
 
 const ScrollingText = () => {
   const textContent =
@@ -199,79 +175,93 @@ const ScrollingText = () => {
 };
 
 const Carousel = ({
+  items,
   selectedIndex,
   setSelectedIndex,
+  onCenterClick,
 }: {
+  items: CarouselItem[];
   selectedIndex: number;
   setSelectedIndex: Dispatch<SetStateAction<number>>;
+  onCenterClick: () => void;
 }) => {
   const [loading, setLoading] = useState(true);
-
-  const handleNext = () => {
-    setSelectedIndex((prev) => (prev + 1) % items.length);
-  };
-
-  const handlePrev = () => {
-    setSelectedIndex((prev) => (prev - 1 + items.length) % items.length);
-  };
-
-  const handleCanvasClick = (
-    event: React.MouseEvent<HTMLDivElement, MouseEvent>
-  ) => {
-    const { clientX, currentTarget } = event;
-    const { left, width } = currentTarget.getBoundingClientRect();
-    const clickPosition = clientX - left;
-
-    if (clickPosition < width / 2) {
-      handlePrev();
-    } else {
-      handleNext();
-    }
-  };
+  const rotationCounterRef = useRef(selectedIndex);
+  const prevIndexRef = useRef(selectedIndex);
 
   useEffect(() => {
+    const numItems = items.length;
+    const current = selectedIndex;
+    const prev = prevIndexRef.current;
+    if (current === prev) return;
+
+    let diff = current - prev;
+    if (diff > numItems / 2) diff -= numItems;
+    if (diff < -numItems / 2) diff += numItems;
+
+    rotationCounterRef.current += diff;
+    prevIndexRef.current = current;
+  }, [selectedIndex, items.length]);
+
+  const handleNext = useCallback(() => {
+    rotationCounterRef.current++;
+    const newIndex =
+      ((rotationCounterRef.current % items.length) + items.length) %
+      items.length;
+    setSelectedIndex(newIndex);
+  }, [items.length, setSelectedIndex]);
+
+  const handlePrev = useCallback(() => {
+    rotationCounterRef.current--;
+    const newIndex =
+      ((rotationCounterRef.current % items.length) + items.length) %
+      items.length;
+    setSelectedIndex(newIndex);
+  }, [items.length, setSelectedIndex]);
+
+  useEffect(() => {
+    let scrollTimeout: NodeJS.Timeout;
+
     const handleWheel = (event: WheelEvent) => {
       event.preventDefault();
-      const direction = event.deltaY > 0 ? 1 : -1;
-      setSelectedIndex(
-        (prev) => (prev + direction + items.length) % items.length
-      );
+      clearTimeout(scrollTimeout);
+
+      scrollTimeout = setTimeout(() => {
+        if (event.deltaY > 0) {
+          handleNext();
+        } else {
+          handlePrev();
+        }
+      }, 50); // Debounce scroll events
     };
+
     const target = window;
     target.addEventListener("wheel", handleWheel, { passive: false });
+
     return () => {
       target.removeEventListener("wheel", handleWheel);
+      clearTimeout(scrollTimeout);
     };
-  }, [setSelectedIndex]);
+  }, [handleNext, handlePrev]);
 
   return (
-    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+    <div className="relative w-full h-full">
       {loading && <LoadingScreen />}
       <div
-        style={{
-          position: "relative",
-          width: "100%",
-          height: "100vh",
-          opacity: loading ? 0 : 1,
-          transition: "opacity 1s ease-in-out",
-          cursor: "pointer",
-        }}
-        onClick={handleCanvasClick}
+        className="relative w-full h-full transition-opacity duration-1000"
+        style={{ opacity: loading ? 0 : 1 }}
       >
         <Canvas
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-          }}
+          style={{ position: "absolute", top: 0, left: 0, zIndex: 0 }}
+          shadows
         >
-          <ambientLight intensity={1.5} />
-          <directionalLight position={[0, 10, 5]} intensity={1.5} />
+          <ambientLight intensity={0.5} />
+          <directionalLight position={[0, 10, 5]} intensity={1} castShadow />
           <Suspense fallback={<Loader onLoaded={() => setLoading(false)} />}>
-            <CarouselContent selectedIndex={selectedIndex} />
-            <ModelFallback />
+            <CarouselContent
+              items={items}
+              rotationCounter={rotationCounterRef}
+            />
           </Suspense>
           <OrbitControls
             enableZoom={false}
@@ -281,6 +271,24 @@ const Carousel = ({
           <Preload all />
         </Canvas>
         <ScrollingText />
+
+        {/* Click Overlays */}
+        <div
+          className="group absolute left-0 top-0 h-full w-[30%] z-10 cursor-pointer flex items-center justify-start p-8 bg-gradient-to-r from-black/40 to-transparent"
+          onClick={handlePrev}
+        >
+          <ChevronLeft className="w-16 h-16 text-white opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
+        </div>
+        <div
+          className="absolute left-[30%] top-0 h-full w-[40%] z-10 cursor-pointer"
+          onClick={onCenterClick}
+        />
+        <div
+          className="group absolute right-0 top-0 h-full w-[30%] z-10 cursor-pointer flex items-center justify-end p-8 bg-gradient-to-l from-black/40 to-transparent"
+          onClick={handleNext}
+        >
+          <ChevronRight className="w-16 h-16 text-white opacity-0 group-hover:opacity-70 transition-opacity duration-300" />
+        </div>
       </div>
     </div>
   );
