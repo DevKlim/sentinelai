@@ -519,6 +519,12 @@
             </a>
           </li>
           <li class="nav-item">
+            <a href="/dashboard/eido/manage" class="nav-link">
+              <i class="fas fa-folder-open"></i>
+              EIDO Management
+            </a>
+          </li>
+          <li class="nav-item">
             <a href="/dashboard/settings" class="nav-link">
               <i class="fas fa-cogs"></i>
               Settings
@@ -643,7 +649,7 @@
             </a>
 
             <a
-              href="http://localhost:8001/api/v1/openapi.json"
+              href="http://localhost:8001/docs"
               target="_blank"
               class="interface-card"
             >
@@ -766,7 +772,9 @@
         document.querySelectorAll(".nav-link").forEach((link) => {
           link.classList.remove("active");
         });
-        event.currentTarget.classList.add("active");
+        if (event) {
+          event.currentTarget.classList.add("active");
+        }
 
         // Load section-specific data
         switch (sectionId) {

@@ -19,7 +19,6 @@ allowed_origins = [
     "http://localhost",
     "http://localhost:80",
     "http://localhost:8080",
-    "http://localhost:8000"
 ]
 
 app.add_middleware(
@@ -32,7 +31,6 @@ app.add_middleware(
 
 categorizer_thread = None
 stop_categorizer_event = threading.Event()
-# A simple file-based flag to enable/disable categorizer across restarts
 CATEGORIZER_ENABLED_FLAG = "categorizer_enabled.flag"
 
 def is_categorizer_enabled():
@@ -47,7 +45,6 @@ def set_categorizer_enabled(enable: bool):
             os.remove(CATEGORIZER_ENABLED_FLAG)
 
 def start_categorizer():
-    """Starts the categorizer thread if it's enabled and not running."""
     global categorizer_thread, stop_categorizer_event
     if is_categorizer_enabled() and (categorizer_thread is None or not categorizer_thread.is_alive()):
         print("Starting categorizer thread...")
@@ -56,7 +53,6 @@ def start_categorizer():
         categorizer_thread.start()
 
 def stop_categorizer():
-    """Stops the categorizer thread."""
     global categorizer_thread, stop_categorizer_event
     if categorizer_thread and categorizer_thread.is_alive():
         print("Stopping categorizer thread...")
@@ -65,7 +61,6 @@ def stop_categorizer():
         categorizer_thread = None
 
 def get_categorizer_status():
-    """Returns the status of the categorizer thread."""
     status = "stopped"
     if categorizer_thread and categorizer_thread.is_alive():
         status = "running"
@@ -74,9 +69,7 @@ def get_categorizer_status():
 
 @app.on_event("startup")
 def startup_event():
-    # Set default state to enabled if flag doesn't exist
-    if not os.path.exists(CATEGORIZER_ENABLED_FLAG):
-        set_categorizer_enabled(True)
+    # Categorizer is now OFF by default. It will only start if the flag file exists.
     start_categorizer()
     asyncio.create_task(watch_for_restart_signal())
 
@@ -91,16 +84,15 @@ async def watch_for_restart_signal():
             print("Restarting categorizer due to settings change...")
             stop_categorizer()
             os.remove("restart_categorizer.flag")
-            # Give it a moment before restarting
             await asyncio.sleep(1)
             start_categorizer()
         await asyncio.sleep(5)
 
-@app.get("/health", status_code=200)
+@app.get("/health", status_code=200, tags=["Health"])
 async def healthcheck():
     return {"status": "ok"}
 
-@app.post("/api/v1/settings/categorizer/toggle")
+@app.post("/api/v1/settings/categorizer/toggle", tags=["Settings"])
 async def toggle_categorizer_endpoint(payload: dict = Body(...)):
     """Enable or disable the categorizer routine."""
     enable = payload.get('enable')
@@ -114,7 +106,7 @@ async def toggle_categorizer_endpoint(payload: dict = Body(...)):
         stop_categorizer()
     return {"message": f"Categorizer has been {'enabled' if enable else 'disabled'}.", "new_state": get_categorizer_status()}
 
-@app.get("/api/v1/settings/categorizer/status")
+@app.get("/api/v1/settings/categorizer/status", tags=["Settings"])
 async def get_categorizer_status_endpoint():
     """Gets the status of the incident categorizer routine."""
     return get_categorizer_status()

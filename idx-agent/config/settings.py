@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     """
     api_host: str = "0.0.0.0"
     api_port: int = 8001
-    eido_agent_url: str = "http://python-services:8000"
+    # <-- CORRECTED LINE: Default to localhost for intra-container communication
+    eido_agent_url: str = "http://localhost:8000"
     
     # LLM Provider: 'google', 'openai', or 'local'
     llm_provider: str = Field(default='google', env='LLM_PROVIDER')
