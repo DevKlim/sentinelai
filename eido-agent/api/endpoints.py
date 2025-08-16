@@ -20,6 +20,9 @@ router = APIRouter(prefix="/api/v1", tags=["EIDO", "Incidents"])
 class RenameRequest(BaseModel):
     name: str
 
+class CreateIncidentRequest(BaseModel):
+    name: str
+
 @router.get("/settings/env", response_model=dict)
 async def get_eido_env_settings():
     """Gets current environment settings for the EIDO agent."""
@@ -132,6 +135,21 @@ async def get_incident_details(incident_id: uuid.UUID, db: AsyncSession = Depend
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return incident
+    
+@router.post("/incidents/create", response_model=IncidentPublic)
+async def create_empty_incident(request: CreateIncidentRequest, db: AsyncSession = Depends(get_db)):
+    """Creates a new, empty incident from scratch with just a name."""
+    try:
+        new_incident = await db_service.create_empty_incident(db, name=request.name)
+        # We need to convert the DB model to a Pydantic model for the response.
+        # We can reuse the logic from get_all_incidents for this.
+        public_incidents = await db_service.get_all_incidents(db)
+        for p_inc in public_incidents:
+            if p_inc.incident_id == new_incident.incident_id:
+                return p_inc
+        raise HTTPException(status_code=404, detail="Incident created but could not be found.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create incident: {e}")
 
 @router.delete("/incidents/{incident_id}", status_code=204)
 async def delete_incident(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db)):

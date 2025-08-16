@@ -3,71 +3,47 @@
   "eidoVersion": "1.0",
   "issuingElementIdentification": "eido-agent",
   "incidentComponent": {
-    "incidentTypeCommonRegistryText": "{{incident_type: Categorize from description into 'Fire', 'Medical Emergency', 'Traffic Accident', 'Crime', 'Disturbance', 'Natural Disaster', or 'Other'}}",
+    "incidentTypeCommonRegistryText": "Unknown",
     "incidentStatusCommonRegistryText": ["Reported"],
-    "incidentCommonPriorityNumber": "{{priority: Assign a numeric priority from 1 (high) to 5 (low) based on severity}}",
-    "notesReference": [
-      {
-        "$ref": "notes-summary"
-      }
-    ],
-    "locationReference": [
-      {
-        "$ref": "location-main"
-      }
-    ],
-    "personReference": [
-      {
-        "$ref": "person-caller"
-      }
-    ]
+    "incidentCommonPriorityNumber": 3,
+    "notesReference": [{ "$ref": "notes-summary" }],
+    "locationReference": [{ "$ref": "location-main" }],
+    "personReference": [{ "$ref": "person-caller" }]
   },
   "locationComponent": [
     {
       "$id": "location-main",
       "locationTypeDescriptionRegistryText": "IncidentLocation",
-      "locationDescriptionText": "{{location_details: Extract and describe the full address, cross-streets, landmarks, or area. Include city and state if possible. If no specific address, describe the area.}}",
-      "notesReference": [
-        {
-          "$ref": "notes-location"
-        }
-      ]
+      "locationDescriptionText": "Provide a detailed text description of the location here.",
+      "locationByValue": {
+        "latitude": null,
+        "longitude": null
+      },
+      "notesReference": [{ "$ref": "notes-location" }]
     }
   ],
   "personComponent": [
     {
       "$id": "person-caller",
-      "personIncidentRoleRegistryText": [
-        "{{person_role: e.g., Caller, Victim, Witness, Suspect}}"
-      ],
-      "notesReference": [
-        {
-          "$ref": "notes-person"
-        }
-      ]
+      "personIncidentRoleRegistryText": ["Responder"],
+      "notesReference": [{ "$ref": "notes-person" }]
     }
   ],
   "notesComponent": [
     {
       "$id": "notes-summary",
-      "notesActionComments": "{{summary: Provide a concise, one-paragraph summary of the incident.}}",
-      "agentReference": {
-        "$ref": "agent-EIDO-Agent-System"
-      }
+      "notesActionComments": "A summary of the incident will be populated here.",
+      "agentReference": { "$ref": "agent-EIDO-Agent-System" }
     },
     {
       "$id": "notes-person",
-      "notesActionComments": "{{person_description: Describe the person involved. Include any mentioned details like name, condition, or actions. If no person is mentioned, state 'No person details provided'.}}",
-      "agentReference": {
-        "$ref": "agent-EIDO-Agent-System"
-      }
+      "notesActionComments": "Information about the people involved will be populated here.",
+      "agentReference": { "$ref": "agent-EIDO-Agent-System" }
     },
     {
       "$id": "notes-location",
-      "notesActionComments": "{{location_notes: Add any extra details about the location, e.g., 'caller is in the back of the store', 'entrance is on the north side'. If none, state 'No additional location notes'.}}",
-      "agentReference": {
-        "$ref": "agent-EIDO-Agent-System"
-      }
+      "notesActionComments": "Additional location details will be populated here.",
+      "agentReference": { "$ref": "agent-EIDO-Agent-System" }
     }
   ],
   "agentComponent": [

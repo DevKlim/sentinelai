@@ -260,6 +260,28 @@ async def delete_incident(incident_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/incidents/create")
+async def create_incident_from_scratch(request: Request):
+    """Creates a new, empty incident with just a name."""
+    try:
+        body = await request.json()
+        name = body.get("name")
+        if not name or not name.strip():
+            raise HTTPException(status_code=400, detail="Incident name cannot be empty.")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/create",
+                json={"name": name},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/eido/submit", response_class=HTMLResponse)
 async def eido_submit_page(request: Request):
     templates_available = ["general_incident.json", "fire_incident.json"]
@@ -274,7 +296,7 @@ async def close_incident_endpoint(incident_id: str):
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{config['IDX_API_URL']}/api/v1/incidents/{incident_id}/close", timeout=30.0
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}/close", timeout=30.0
             )
             response.raise_for_status()
             return JSONResponse(content=response.json(), status_code=response.status_code)

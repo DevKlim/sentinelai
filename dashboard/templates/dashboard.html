@@ -326,6 +326,11 @@
         color: #ffffff;
       }
 
+      .header-actions {
+        display: flex;
+        gap: 1rem;
+      }
+
       .refresh-btn {
         background: #333333;
         border: 1px solid #555555;
@@ -335,10 +340,17 @@
         cursor: pointer;
         transition: all 0.3s ease;
         font-size: 0.9rem;
+        text-decoration: none; /* For <a> tags styled as buttons */
+        display: inline-flex;
+        align-items: center;
       }
 
       .refresh-btn:hover {
         background: #444444;
+      }
+
+      .refresh-btn i {
+        margin-right: 0.5rem;
       }
 
       .chart-container {
@@ -736,9 +748,14 @@
           <div class="analytics-section">
             <div class="section-header">
               <h3 class="section-title">Recent Incidents</h3>
-              <button class="refresh-btn" onclick="loadIncidents()">
-                <i class="fas fa-sync-alt"></i> Refresh
-              </button>
+              <div class="header-actions">
+                <button class="refresh-btn" onclick="handleCreateIncident()">
+                  <i class="fas fa-plus-circle"></i> Create New Incident
+                </button>
+                <button class="refresh-btn" onclick="loadIncidents()">
+                  <i class="fas fa-sync-alt"></i> Refresh
+                </button>
+              </div>
             </div>
             <div id="incidents-list" class="incident-list loading">
               Loading incidents...
@@ -1110,6 +1127,31 @@
           console.error("Error loading incidents:", error);
           document.getElementById("incidents-list").innerHTML =
             '<div class="error">Failed to load incidents.</div>';
+        }
+      }
+
+      async function handleCreateIncident() {
+        const name = prompt("Please enter a name for the new incident:");
+        if (name && name.trim()) {
+          try {
+            const response = await fetch("/dashboard/api/incidents/create", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ name: name.trim() }),
+            });
+            if (!response.ok) {
+              const err = await response.json();
+              throw new Error(err.detail || "Failed to create incident");
+            }
+            const newIncident = await response.json();
+            alert("Incident created successfully!");
+            window.location.href = `/dashboard/incident/${newIncident.incident_id}`;
+          } catch (error) {
+            alert(`Error: ${error.message}`);
+          }
+        } else if (name !== null) {
+          // User didn't cancel, but entered empty string
+          alert("Incident name cannot be empty.");
         }
       }
 

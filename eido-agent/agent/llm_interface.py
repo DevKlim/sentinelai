@@ -1,4 +1,5 @@
 # sdsc-orchestrator/eido-agent/agent/llm_interface.py
+# sdsc-orchestrator/eido-agent/agent/llm_interface.py
 import json
 import google.generativeai as genai
 from openai import OpenAI
@@ -59,8 +60,9 @@ class LLMInterface:
         Analyze the following incident description and extract structured information to populate the given JSON template.
         Follow these instructions:
         1.  Populate the provided JSON template with details extracted from the text.
-        2.  Based on the content, generate a concise, descriptive incident name (e.g., "Structure Fire at 123 Main St", "Two-Car Accident on I-5") and add it to a "suggestedIncidentName" key at the root of the JSON object.
-        3.  Based on the content, generate a list of 3-5 relevant keyword tags (e.g., "fire", "vehicle collision", "downtown", "injury") and add them to a "tags" key at the root of the JSON object.
+        2.  Generate a descriptive, headline-style incident name based on the text's main subject. For example, use the first sentence or the most critical information (e.g., "Wildland Fire near community of Boulevard, Evacuation Orders Issued"). Add this to a "suggestedIncidentName" key at the root of the JSON object.
+        3.  Based on the content, generate a list of 3-5 relevant keyword tags (e.g., "wildland fire", "evacuation", "San Diego County", "structure threat") and add them to a "tags" key at the root of the JSON object.
+        4.  If a location is described, geocode it and populate the `latitude` and `longitude` fields within the `locationByValue` object. If you cannot determine coordinates, use `null` for those fields.
 
         The JSON template is:
         ```json

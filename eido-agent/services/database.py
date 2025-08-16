@@ -3,35 +3,37 @@ from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, delete, and_
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 
 from data_models import models, schemas
 
 # --- Helper Functions ---
 
-def _extract_info_from_eido(eido_data: Dict[str, Any]):
-    """Extracts key information from an EIDO dictionary for incident creation."""
+def _extract_standard_info_from_eido(eido_data: Dict[str, Any]) -> Tuple[str, str, List[List[float]]]:
+    """Extracts only standard, non-generated information from an EIDO dictionary."""
     incident_info = eido_data.get("incidentComponent", {})
-    # Use incidentTypeInternalText first, fallback to a generated name if needed
-    name = incident_info.get("incidentTypeInternalText")
     inc_type = incident_info.get("incidentTypeCommonRegistryText", "Unknown")
     
     notes = eido_data.get("notesComponent", [])
     summary = notes[0].get("notesActionComments", "No summary available.") if notes else "No summary available."
 
-    if not name or name.isspace():
-        name = f"{inc_type} Incident" if inc_type != "Unknown" else "Unnamed Incident"
-
-    location_component = eido_data.get("locationComponent", [])
-    location_json = None
     locations_coords = []
+    location_component = eido_data.get("locationComponent", [])
     if location_component:
-        loc_val = location_component[0].get("locationByValue")
+        # Check inside the first item of the list
+        loc_data = location_component[0] if isinstance(location_component, list) and len(location_component) > 0 else {}
+        loc_val = loc_data.get("locationByValue")
         if isinstance(loc_val, dict) and "latitude" in loc_val and "longitude" in loc_val:
-            location_json = {"latitude": loc_val["latitude"], "longitude": loc_val["longitude"]}
-            locations_coords.append([loc_val["latitude"], loc_val["longitude"]])
+            lat = loc_val.get("latitude")
+            lon = loc_val.get("longitude")
+            if lat is not None and lon is not None:
+                try:
+                    # Ensure they are valid floats before appending
+                    locations_coords.append([float(lat), float(lon)])
+                except (ValueError, TypeError):
+                    pass # Ignore if coordinates are not valid numbers
             
-    return name, inc_type, summary, location_json, locations_coords
+    return inc_type, summary, locations_coords
 
 
 async def _db_eido_to_public_pydantic(db: AsyncSession, eido_report: models.EidoReport) -> schemas.EidoReportPublic:
@@ -78,13 +80,14 @@ async def _db_incident_to_detailed_pydantic(db: AsyncSession, incident: models.I
 
 async def create_eido_report(db: AsyncSession, eido_data: Dict[str, Any], source: str, incident_id: Optional[str] = None) -> models.EidoReport:
     """Creates and saves a new EIDO report."""
-    _, _, desc, location_json, _ = _extract_info_from_eido(eido_data)
-    
+    _, summary, locations = _extract_standard_info_from_eido(eido_data)
+    location_json = {"latitude": locations[0][0], "longitude": locations[0][1]} if locations else None
+
     new_report = models.EidoReport(
         eido_id=str(uuid.uuid4()),
         incident_id_fk=incident_id,
         source=source,
-        description=desc,
+        description=summary,
         location=location_json,
         status="linked" if incident_id else "uncategorized",
         original_eido=eido_data
@@ -146,8 +149,16 @@ async def bulk_recategorize_eidos(db: AsyncSession, eido_ids: List[str], target_
 # --- Incident Functions ---
 
 async def create_incident_from_eido(db: AsyncSession, eido_data: Dict[str, Any]) -> models.Incident:
-    """Creates a new incident from EIDO data."""
-    name, inc_type, summary, _, locations_coords = _extract_info_from_eido(eido_data)
+    """Creates a new incident from EIDO data, prioritizing LLM-generated fields."""
+    # Extract standard fields and coordinates
+    inc_type, summary, locations_coords = _extract_standard_info_from_eido(eido_data)
+    
+    # Prioritize LLM-generated name, with a fallback
+    fallback_name = f"{inc_type} Incident" if inc_type != "Unknown" else "Unnamed Incident"
+    name = eido_data.get("suggestedIncidentName", fallback_name).strip()
+    
+    # Prioritize LLM-generated tags
+    tags = eido_data.get("tags", [])
     
     new_incident = models.Incident(
         incident_id=str(uuid.uuid4()),
@@ -156,6 +167,22 @@ async def create_incident_from_eido(db: AsyncSession, eido_data: Dict[str, Any])
         summary=summary,
         status="open",
         locations=locations_coords,
+        tags=tags
+    )
+    db.add(new_incident)
+    await db.commit()
+    await db.refresh(new_incident)
+    return new_incident
+
+async def create_empty_incident(db: AsyncSession, name: str) -> models.Incident:
+    """Creates a new, empty incident with just a name."""
+    new_incident = models.Incident(
+        incident_id=str(uuid.uuid4()),
+        name=name,
+        incident_type="Unspecified",
+        summary="Incident created manually.",
+        status="open",
+        locations=[],
         tags=[]
     )
     db.add(new_incident)
@@ -220,6 +247,15 @@ async def update_incident_status(db: AsyncSession, incident_id: str, new_status:
     incident = await get_incident_by_incident_id(db, incident_id)
     if incident:
         incident.status = new_status
+        await db.commit()
+        await db.refresh(incident)
+    return incident
+
+async def rename_incident(db: AsyncSession, incident_id: str, new_name: str) -> Optional[models.Incident]:
+    """Renames an incident."""
+    incident = await get_incident_by_incident_id(db, incident_id)
+    if incident:
+        incident.name = new_name
         await db.commit()
         await db.refresh(incident)
     return incident

@@ -35,8 +35,8 @@ class IncidentCategorizer:
             print(f"LLM client not configured, categorizer will be inactive: {e}")
             self.llm_client = None
         self.check_interval = 15
-        self.time_window_hours = 12  # Loosened from 6
-        self.distance_threshold_km = 15 # Loosened from 10
+        self.time_window_hours = 72  # Loosened to 3 days
+        self.distance_threshold_km = 20 # Loosened from 10
         self.similarity_threshold = 0.05 # Loosened from 0.1
 
     async def fetch_uncategorized_eidos(self):
@@ -75,7 +75,7 @@ class IncidentCategorizer:
         except (ValueError, TypeError): return []
 
         for incident in active_incidents:
-            # Time check
+            # Time check (now very lenient)
             is_time_match = False
             try:
                 incident_time = datetime.fromisoformat(incident.get('created_at').replace('Z', '+00:00'))
@@ -123,16 +123,25 @@ class IncidentCategorizer:
             "tags": inc.get("tags", [])
         } for inc in candidate_incidents]
 
-        prompt = f"""You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) belongs to an existing active incident based on contextual relevance.
+        prompt = f"""You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) is an UPDATE to an existing active incident or an entirely NEW event. Analyze semantically: "Roadrunner Fire" could be the same as "wildland fire near Boulevard".
 New EIDO Report: {json.dumps(new_eido_context, indent=2, default=str)}
 Potentially Related Active Incidents: {json.dumps(candidates_context, indent=2, default=str)}
-Analyze the new EIDO against the candidates. Consider the time, location, tags, and description. Respond with a JSON object.
-If it's a MATCH, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_best_matching_incident", "reason": "Briefly explain why it matches."}}
-If it's a NEW incident, use this format: {{"decision": "NEW", "reason": "Briefly explain why it's a new incident.", "incident_details": {{"incident_name": "A concise, descriptive name for the new incident.", "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.", "summary": "A brief summary of the new incident.", "tags": ["relevant", "keywords"]}}}}
+Analyze the new EIDO against the candidates. Consider the time, location, tags, and especially the semantic meaning of the descriptions. A report about evacuations being lifted for a fire is an update to the original fire report. Respond with a JSON object.
+If it's a MATCH to an existing incident, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_best_matching_incident", "reason": "Briefly explain why it is an update to the chosen incident."}}
+If it's a NEW incident, use this format: {{"decision": "NEW", "reason": "Briefly explain why this is a new event.", "incident_details": {{"incident_name": "A concise, descriptive headline for the new incident.", "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.", "summary": "A brief summary of the new incident.", "tags": ["relevant", "keywords"]}}}}
 Your JSON response:"""
         try:
-            response = self.llm_client.generate_content(prompt)
-            clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            if self.llm_provider == 'google':
+                response = self.llm_client.generate_content(prompt)
+                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            else: # Assuming OpenAI compatible
+                response = self.llm_client.chat.completions.create(
+                    model=settings.openai_model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+                clean_response = response.choices[0].message.content
+
             return json.loads(clean_response)
         except Exception as e:
             print(f"LLM matching failed: {e}"); return None
@@ -140,11 +149,28 @@ Your JSON response:"""
     async def create_new_incident_details(self, eido: dict):
         """Uses LLM to generate details for a new incident from an EIDO."""
         if not self.llm_client: return None
-        prompt = f"""Analyze the following EIDO text and generate details for a new incident. EIDO Text: "{eido.get('description', '')}"
-Respond in JSON format with these fields: "incident_name", "incident_type" (Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'), "summary", "tags" (a list of 2-4 keywords)."""
+        
+        eido_desc = eido.get('description', '')
+        eido_tags = eido.get('original_eido', {}).get('tags', [])
+        
+        prompt = f"""Analyze the following EIDO information and generate details for a new incident. 
+EIDO Description: "{eido_desc}"
+EIDO Tags: {eido_tags}
+Respond with a single JSON object with these exact keys: "incident_name" (make this a descriptive headline), "incident_type" (Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'), "summary", and "tags" (a list of 2-4 relevant keywords derived from the context).
+Your JSON response:"""
+
         try:
-            response = self.llm_client.generate_content(prompt)
-            clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            if self.llm_provider == 'google':
+                response = self.llm_client.generate_content(prompt)
+                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            else: # OpenAI
+                response = self.llm_client.chat.completions.create(
+                    model=settings.openai_model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+                clean_response = response.choices[0].message.content
+                
             return json.loads(clean_response)
         except Exception as e:
             print(f"LLM detail generation for new incident failed: {e}"); return None
@@ -173,8 +199,17 @@ Analyze the following reports: {json.dumps(eido_summaries, indent=2)}
 Respond with a JSON object containing a single key 'incident_groups', which is a list of lists. Each inner list should contain the string IDs of EIDOs that belong to the same incident. Each EIDO ID must appear in exactly one group.
 Example response: {{"incident_groups": [["id_1", "id_3"], ["id_2"], ["id_4"]]}}"""
         try:
-            response = self.llm_client.generate_content(prompt)
-            clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            if self.llm_provider == 'google':
+                response = self.llm_client.generate_content(prompt)
+                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+            else: # OpenAI
+                response = self.llm_client.chat.completions.create(
+                    model=settings.openai_model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format={"type": "json_object"}
+                )
+                clean_response = response.choices[0].message.content
+
             grouped_ids = json.loads(clean_response).get("incident_groups", [])
             
             eido_map = {e['id']: e for e in eidos}
@@ -243,7 +278,11 @@ Example response: {{"incident_groups": [["id_1", "id_3"], ["id_2"], ["id_4"]]}}"
                     if stop_event.is_set(): break
                     await self.process_eido_group(group)
             
-            await asyncio.sleep(self.check_interval)
+            # Wait for the check interval, but check the stop event more frequently.
+            for _ in range(self.check_interval):
+                if stop_event.is_set():
+                    break
+                await asyncio.sleep(1)
 
 def run_categorizer(stop_event: threading.Event):
     loop = asyncio.new_event_loop()
