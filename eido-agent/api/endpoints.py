@@ -120,7 +120,7 @@ async def get_incident_details(incident_id: uuid.UUID, db: AsyncSession = Depend
     """
     Retrieves detailed information for a specific incident, including all its EIDO reports.
     """
-    incident = await db_service.get_incident_details(db, incident_id)
+    incident = await db_service.get_incident_details(db, str(incident_id))
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
     return incident
@@ -130,7 +130,7 @@ async def delete_incident(incident_id: uuid.UUID, db: AsyncSession = Depends(get
     """
     Deletes an incident and all its associated EIDO reports.
     """
-    success = await db_service.delete_incident(db, incident_id)
+    success = await db_service.delete_incident(db, str(incident_id))
     if not success:
         raise HTTPException(status_code=404, detail="Incident not found or could not be deleted.")
     return None
@@ -140,20 +140,32 @@ async def add_tag_to_incident(incident_id: uuid.UUID, request: TagRequest, db: A
     """
     Adds a tag to a specific incident.
     """
-    incident = await db_service.add_tag_to_incident(db, incident_id, request.tag)
+    incident = await db_service.add_tag_to_incident(db, str(incident_id), request.tag)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
-    return incident
+    # This returns the DB model, but the endpoint expects a Pydantic model.
+    # For a minimal fix, we'll refetch the public view.
+    public_incident = await db_service.get_all_incidents(db)
+    for p_inc in public_incident:
+        if p_inc.incident_id == str(incident_id):
+            return p_inc
+    raise HTTPException(status_code=404, detail="Incident not found after tagging.")
+
 
 @router.post("/incidents/{incident_id}/close", response_model=IncidentPublic)
 async def close_incident(incident_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     """
     Closes an incident.
     """
-    incident = await db_service.update_incident_status(db, incident_id, "closed")
+    incident = await db_service.update_incident_status(db, str(incident_id), "closed")
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found.")
-    return incident
+    public_incidents = await db_service.get_all_incidents(db)
+    for p_inc in public_incidents:
+        if p_inc.incident_id == str(incident_id):
+            return p_inc
+    raise HTTPException(status_code=404, detail="Incident not found after closing.")
+
 
 @router.post("/incidents/link_eido", response_model=Dict[str, Any])
 async def link_eido_to_incident_endpoint(request: LinkEidoRequest, db: AsyncSession = Depends(get_db)):
@@ -180,20 +192,25 @@ async def get_all_eidos(
 @router.post("/eidos/bulk-actions", response_model=Dict[str, Any])
 async def perform_eido_bulk_action(request: EidoBulkActionRequest, db: AsyncSession = Depends(get_db)):
     """
-    Performs a bulk action (e.g., delete, link) on a list of EIDOs.
+    Performs a bulk action (e.g., delete, recategorize) on a list of EIDOs.
     """
-    if request.action == "delete":
+    if request.action_type == "delete":
         deleted_count = await db_service.bulk_delete_eidos(db, request.eido_ids)
         return {"message": f"Successfully deleted {deleted_count} EIDO(s)."}
+    elif request.action_type == "recategorize":
+        if not request.target_incident_id:
+            raise HTTPException(status_code=400, detail="target_incident_id is required for recategorize action.")
+        updated_count = await db_service.bulk_recategorize_eidos(db, request.eido_ids, request.target_incident_id)
+        return {"message": f"Successfully recategorized {updated_count} EIDO(s)."}
     else:
-        raise HTTPException(status_code=400, detail=f"Action '{request.action}' is not supported.")
+        raise HTTPException(status_code=400, detail=f"Action '{request.action_type}' is not supported.")
 
 @router.delete("/eidos/{eido_id}", status_code=204)
 async def delete_single_eido(eido_id: uuid.UUID, db: AsyncSession = Depends(get_db)):
     """
     Deletes a single EIDO report.
     """
-    success = await db_service.delete_eido_report(db, eido_id)
+    success = await db_service.delete_eido_report(db, str(eido_id))
     if not success:
         raise HTTPException(status_code=404, detail="EIDO report not found or could not be deleted.")
     return None

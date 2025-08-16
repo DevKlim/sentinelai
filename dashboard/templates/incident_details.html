@@ -40,6 +40,8 @@
         display: flex;
         justify-content: space-between;
         align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
       }
 
       .header-info h1 {
@@ -54,6 +56,12 @@
         font-size: 1.1rem;
         font-weight: 300;
         text-transform: capitalize;
+      }
+
+      .header .actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
       }
 
       .incident-grid {
@@ -152,7 +160,12 @@
         gap: 0.5rem;
       }
 
-      .action-btn:hover {
+      .action-btn:disabled {
+        cursor: not-allowed;
+        opacity: 0.6;
+      }
+
+      .action-btn:hover:not(:disabled) {
         background-color: #444444;
       }
 
@@ -266,6 +279,19 @@
         gap: 1rem;
       }
 
+      .fa-spin {
+        animation: fa-spin 1s infinite linear;
+      }
+
+      @keyframes fa-spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
       @media (max-width: 900px) {
         .incident-grid {
           grid-template-columns: 1fr;
@@ -287,7 +313,14 @@
             Type: {{ incident.incident_type }}
           </p>
         </div>
-        <div>
+        <div class="actions">
+          <button
+            id="composite-eido-btn"
+            class="action-btn"
+            onclick="createCompositeEido('{{ incident.incident_id }}')"
+          >
+            <i class="fas fa-layer-group"></i> Create Composite EIDO
+          </button>
           <button
             class="action-btn download-btn"
             onclick="downloadIncident('{{ incident.incident_id }}')"
@@ -421,21 +454,13 @@
           alert("Could not find JSON content to copy.");
           return;
         }
-        // The text content needs to be decoded from what Jinja escapes.
-        // A temporary textarea is a reliable way to do this.
-        const textArea = document.createElement("textarea");
-        textArea.textContent = codeElement.textContent;
-        document.body.appendChild(textArea);
-        textArea.select();
-        try {
-          document.execCommand("copy");
-          alert("JSON copied to clipboard!");
-        } catch (err) {
-          alert("Failed to copy JSON.");
-          console.error("Copy error", err);
-        } finally {
-          document.body.removeChild(textArea);
-        }
+        navigator.clipboard
+          .writeText(codeElement.textContent)
+          .then(() => alert("JSON copied to clipboard!"))
+          .catch((err) => {
+            alert("Failed to copy JSON.");
+            console.error("Copy error", err);
+          });
       }
 
       async function closeIncident(incidentId) {
@@ -468,15 +493,12 @@
           body: JSON.stringify({ tag: tag }),
         })
           .then((response) => {
-            if (!response.ok)
-              throw new Error(
-                "Failed to add tag. Backend support may be missing."
-              );
+            if (!response.ok) throw new Error("Failed to add tag.");
             return response.json();
           })
           .then(() => {
             alert("Tag added successfully!");
-            location.reload(); // Simple way to show the new tag
+            location.reload();
           })
           .catch((error) => alert(error.message));
       }
@@ -508,6 +530,44 @@
 
       function downloadIncident(incidentId) {
         window.location.href = `/dashboard/api/incidents/${incidentId}/download`;
+      }
+
+      async function createCompositeEido(incidentId) {
+        const btn = document.getElementById("composite-eido-btn");
+        const originalText = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+        btn.disabled = true;
+
+        try {
+          const response = await fetch(
+            `/dashboard/api/incidents/${incidentId}/composite-eido`
+          );
+          if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(
+              errorData.detail || `Server responded with ${response.status}`
+            );
+          }
+
+          const compositeEido = await response.json();
+          const blob = new Blob([JSON.stringify(compositeEido, null, 2)], {
+            type: "application/json",
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement("a");
+          a.style.display = "none";
+          a.href = url;
+          a.download = `composite_eido_${incidentId.substring(0, 8)}.json`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        } catch (error) {
+          alert(`Error creating composite EIDO: ${error.message}`);
+        } finally {
+          btn.innerHTML = originalText;
+          btn.disabled = false;
+        }
       }
     </script>
   </body>

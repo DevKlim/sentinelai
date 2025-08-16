@@ -51,6 +51,9 @@
         margin-bottom: 1.5rem;
         border-bottom: 1px solid #333;
         padding-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
       }
       .form-group {
         margin-bottom: 1.5rem;
@@ -87,9 +90,10 @@
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
+        border: 1px solid transparent;
       }
       .btn-primary {
-        border: 1px solid #ffc107;
+        border-color: #ffc107;
         background: #ffc107;
         color: #000000;
       }
@@ -123,12 +127,67 @@
         display: none;
       }
       .response-message.success {
-        background: #5cb85c;
-        color: #ffffff;
+        background-color: rgba(92, 184, 92, 0.2);
+        color: #5cb85c;
+        border: 1px solid #5cb85c;
       }
       .response-message.error {
-        background: #d9534f;
-        color: #ffffff;
+        background-color: rgba(217, 83, 79, 0.2);
+        color: #d9534f;
+        border: 1px solid #d9534f;
+      }
+      .toggle-switch {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+      }
+      .toggle-switch label {
+        position: relative;
+        display: inline-block;
+        width: 60px;
+        height: 34px;
+      }
+      .toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #333;
+        transition: 0.4s;
+        border-radius: 34px;
+      }
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 26px;
+        width: 26px;
+        left: 4px;
+        bottom: 4px;
+        background-color: white;
+        transition: 0.4s;
+        border-radius: 50%;
+      }
+      input:checked + .slider {
+        background-color: #ffc107;
+      }
+      input:checked + .slider:before {
+        transform: translateX(26px);
+      }
+      .status-text {
+        font-weight: 500;
+      }
+      .status-text .status-running {
+        color: #5cb85c;
+      }
+      .status-text .status-stopped {
+        color: #d9534f;
       }
     </style>
   </head>
@@ -142,7 +201,6 @@
         <p>Configure dashboard and backend agent settings.</p>
       </div>
 
-      <!-- Dashboard Settings -->
       <div class="settings-card">
         <h2><i class="fas fa-desktop"></i> Dashboard Settings</h2>
         <form id="dashboard-settings-form">
@@ -160,8 +218,8 @@
             >
             <input type="password" id="google-api-key" class="form-input" />
             <p class="form-help-text">
-              Required for bulk text processing. Leave unchanged to keep
-              existing key.
+              Required for bulk text processing and composite EIDOs. Leave
+              unchanged to keep existing key.
             </p>
           </div>
           <button type="submit" class="btn btn-primary">
@@ -171,36 +229,36 @@
         </form>
       </div>
 
-      <!-- IDX Agent Settings -->
       <div class="settings-card">
         <h2><i class="fas fa-cogs"></i> IDX Agent Settings</h2>
-        <form id="idx-settings-form">
-          <div class="form-group">
-            <label for="idx-llm-provider" class="form-label"
-              >LLM Provider</label
-            >
-            <select id="idx-llm-provider" class="form-select">
-              <option value="google">Google</option>
-              <option value="openai">OpenAI</option>
-              <option value="local">Local</option>
-            </select>
+        <div class="form-group">
+          <label class="form-label">Automated Incident Categorizer</label>
+          <div class="toggle-switch">
+            <label>
+              <input type="checkbox" id="categorizer-toggle" />
+              <span class="slider"></span>
+            </label>
+            <div id="categorizer-status-text" class="status-text">
+              Fetching status...
+            </div>
           </div>
-          <button type="submit" class="btn btn-primary">
-            Save IDX Agent Settings
-          </button>
           <p class="form-help-text">
-            Note: More advanced IDX settings (API keys, models) should be
-            configured if necessary, this is a simplified example.
+            Enable to automatically process uncategorized EIDOs and group them
+            into new or existing incidents.
           </p>
-          <div id="idx-response" class="response-message"></div>
-        </form>
+        </div>
+        <div id="idx-response" class="response-message"></div>
       </div>
     </div>
 
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         loadDashboardSettings();
-        loadIdxSettings();
+        loadCategorizerStatus();
+
+        document
+          .getElementById("categorizer-toggle")
+          .addEventListener("change", toggleCategorizer);
       });
 
       async function loadDashboardSettings() {
@@ -212,7 +270,9 @@
           document.getElementById("eido-api-url").value = data.EIDO_API_URL;
           document.getElementById("idx-api-url").value = data.IDX_API_URL;
           document.getElementById("google-api-key").placeholder =
-            data.GOOGLE_API_KEY ? "********" : "Not Set";
+            data.GOOGLE_API_KEY === "********"
+              ? "******** (Already Set)"
+              : "Not Set";
         } catch (error) {
           console.error("Error loading dashboard settings:", error);
           displayMessage(
@@ -223,17 +283,46 @@
         }
       }
 
-      async function loadIdxSettings() {
+      async function loadCategorizerStatus() {
+        const toggle = document.getElementById("categorizer-toggle");
+        const statusText = document.getElementById("categorizer-status-text");
         try {
-          const response = await fetch("/dashboard/api/settings/agent/idx");
+          const response = await fetch(
+            "/dashboard/api/settings/idx/categorizer/status"
+          );
           if (!response.ok)
-            throw new Error("Failed to load IDX agent settings");
+            throw new Error("Failed to fetch status from IDX agent");
           const data = await response.json();
-          document.getElementById("idx-llm-provider").value =
-            data.LLM_PROVIDER || "google";
+
+          toggle.checked = data.enabled;
+          const statusClass =
+            data.status === "running" ? "status-running" : "status-stopped";
+          statusText.innerHTML = `Enabled: <span class="${statusClass}">${data.enabled}</span>, Status: <span class="${statusClass}">${data.status}</span>`;
         } catch (error) {
-          console.error("Error loading IDX agent settings:", error);
+          statusText.innerHTML = `<span class="status-stopped">Error: ${error.message}</span>`;
+        }
+      }
+
+      async function toggleCategorizer() {
+        const toggle = document.getElementById("categorizer-toggle");
+        const enable = toggle.checked;
+        try {
+          const response = await fetch(
+            "/dashboard/api/settings/idx/categorizer/toggle",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ enable: enable }),
+            }
+          );
+          const result = await response.json();
+          if (!response.ok)
+            throw new Error(result.detail || "Failed to toggle");
+          displayMessage("idx-response", result.message, "success");
+          loadCategorizerStatus();
+        } catch (error) {
           displayMessage("idx-response", `Error: ${error.message}`, "error");
+          toggle.checked = !enable; // Revert toggle on error
         }
       }
 
@@ -241,11 +330,11 @@
         .getElementById("dashboard-settings-form")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
+          const keyInput = document.getElementById("google-api-key");
           const settings = {
             EIDO_API_URL: document.getElementById("eido-api-url").value,
             IDX_API_URL: document.getElementById("idx-api-url").value,
-            GOOGLE_API_KEY:
-              document.getElementById("google-api-key").value || "********", // Send placeholder if empty
+            GOOGLE_API_KEY: keyInput.value || "********",
           };
           try {
             const response = await fetch("/dashboard/api/settings/dashboard", {
@@ -257,39 +346,14 @@
             if (!response.ok)
               throw new Error(result.detail || "Failed to save settings");
             displayMessage("dashboard-response", result.message, "success");
-            document.getElementById("google-api-key").value = ""; // Clear password field
-            loadDashboardSettings(); // Refresh placeholder
+            keyInput.value = "";
+            loadDashboardSettings();
           } catch (error) {
             displayMessage(
               "dashboard-response",
               `Error: ${error.message}`,
               "error"
             );
-          }
-        });
-
-      document
-        .getElementById("idx-settings-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const settings = {
-            settings: {
-              LLM_PROVIDER: document.getElementById("idx-llm-provider").value,
-            },
-          };
-          try {
-            const response = await fetch("/dashboard/api/settings/agent/idx", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(settings),
-            });
-            const result = await response.json();
-            if (!response.ok)
-              throw new Error(result.detail || "Failed to save settings");
-            displayMessage("idx-response", result.message, "success");
-            loadIdxSettings(); // Refresh
-          } catch (error) {
-            displayMessage("idx-response", `Error: ${error.message}`, "error");
           }
         });
 

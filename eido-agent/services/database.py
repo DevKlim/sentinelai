@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import update, delete, and_
@@ -12,17 +12,20 @@ from data_models import models, schemas
 def _extract_info_from_eido(eido_data: Dict[str, Any]):
     """Extracts key information from an EIDO dictionary for incident creation."""
     incident_info = eido_data.get("incidentComponent", {})
-    name = incident_info.get("incidentTypeInternalText", "Unnamed Incident")
+    # Use incidentTypeInternalText first, fallback to a generated name if needed
+    name = incident_info.get("incidentTypeInternalText")
     inc_type = incident_info.get("incidentTypeCommonRegistryText", "Unknown")
     
     notes = eido_data.get("notesComponent", [])
     summary = notes[0].get("notesActionComments", "No summary available.") if notes else "No summary available."
-    
+
+    if not name or name.isspace():
+        name = f"{inc_type} Incident" if inc_type != "Unknown" else "Unnamed Incident"
+
     location_component = eido_data.get("locationComponent", [])
     location_json = None
     locations_coords = []
     if location_component:
-        # A real implementation would parse complex PIDF-LO XML. This is a simplified placeholder.
         loc_val = location_component[0].get("locationByValue")
         if isinstance(loc_val, dict) and "latitude" in loc_val and "longitude" in loc_val:
             location_json = {"latitude": loc_val["latitude"], "longitude": loc_val["longitude"]}
@@ -56,7 +59,7 @@ async def _db_incident_to_detailed_pydantic(db: AsyncSession, incident: models.I
     result = await db.execute(query)
     eido_reports = result.scalars().all()
     
-    pydantic_reports = [_ for _ in [await _db_eido_to_public_pydantic(db, r) for r in eido_reports]]
+    pydantic_reports = [await _db_eido_to_public_pydantic(db, r) for r in eido_reports]
 
     return schemas.IncidentDetailPublic(
         incident_id=incident.incident_id,
@@ -114,6 +117,32 @@ async def bulk_delete_eidos(db: AsyncSession, eido_ids: List[str]) -> int:
     await db.commit()
     return result.rowcount
 
+async def bulk_recategorize_eidos(db: AsyncSession, eido_ids: List[str], target_incident_id: str) -> int:
+    """
+    Links multiple EIDO reports to a single incident and updates their status.
+    Also updates the target incident's `updated_at` timestamp.
+    """
+    # Step 1: Update the EIDO reports
+    update_eidos_stmt = (
+        update(models.EidoReport)
+        .where(models.EidoReport.eido_id.in_(eido_ids))
+        .values(incident_id_fk=target_incident_id, status="linked")
+        .execution_options(synchronize_session=False)
+    )
+    result = await db.execute(update_eidos_stmt)
+    
+    # Step 2: Update the timestamp of the target incident
+    update_incident_stmt = (
+        update(models.Incident)
+        .where(models.Incident.incident_id == target_incident_id)
+        .values(updated_at=datetime.now(timezone.utc))
+        .execution_options(synchronize_session=False)
+    )
+    await db.execute(update_incident_stmt)
+    
+    await db.commit()
+    return result.rowcount
+
 # --- Incident Functions ---
 
 async def create_incident_from_eido(db: AsyncSession, eido_data: Dict[str, Any]) -> models.Incident:
@@ -142,10 +171,8 @@ async def get_all_incidents(db: AsyncSession, status: Optional[str] = None) -> L
     result = await db.execute(query)
     incidents = result.scalars().all()
 
-    # Create a list of public-facing incident schemas
     public_incidents = []
     for inc in incidents:
-        # Get report count efficiently
         count_query = select(models.EidoReport).where(models.EidoReport.incident_id_fk == inc.incident_id)
         count_result = await db.execute(count_query)
         report_count = len(count_result.scalars().all())

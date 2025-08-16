@@ -48,8 +48,9 @@ class EidoReportPublic(BaseModel):
     source: str
     description: Optional[str] = None
     original_eido: Optional[Dict[str, Any]] = None
-    location: Optional[Dict[str, Any]] = None # FIX: Add missing location field for categorizer
-    incidents: Optional[List[Dict[str, Any]]] = [] # Match field in EidoManagement for linked incidents
+    location: Optional[Dict[str, Any]] = None
+    status: str  # <-- FIX: Added missing status field
+    incidents: Optional[List[Dict[str, Any]]] = []
 
     class Config:
         from_attributes = True
@@ -120,9 +121,10 @@ class TagRequest(BaseModel):
 
 # --- Schemas for Bulk Actions ---
 class EidoBulkActionRequest(BaseModel):
-    action: str  # e.g., 'delete', 'assign'
+    # <-- FIX: Updated to match the payload sent by the frontend JavaScript
+    action_type: str
     eido_ids: List[str]
-    incident_id: Optional[str] = None # For 'assign' action
+    target_incident_id: Optional[str] = None
 
 # --- FIX for ImportError ---
 # Alias EidoReport to ReportCoreData to satisfy imports in other modules

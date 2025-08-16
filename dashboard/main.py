@@ -285,6 +285,73 @@ async def download_incident_zip(incident_id: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.get("/api/incidents/{incident_id}/composite-eido", response_class=JSONResponse)
+async def create_composite_eido(incident_id: str):
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM client not configured. Cannot create composite EIDO.")
+
+    try:
+        # 1. Fetch incident data from EIDO agent
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=30.0
+            )
+            response.raise_for_status()
+            incident = response.json()
+
+        # 2. Extract all EIDOs
+        eidos_to_process = [
+            report.get("original_eido")
+            for report in incident.get("reports", [])
+            if report.get("original_eido")
+        ]
+
+        if not eidos_to_process:
+            raise HTTPException(status_code=404, detail="No EIDO reports found for this incident to create a composite.")
+
+        # 3. Formulate the prompt
+        eidos_history_str = json.dumps(eidos_to_process, indent=2)
+
+        prompt = f"""
+You are an expert emergency services data analyst. You will be given a list of EIDO (Emergency Incident Data Object) JSONs that all pertain to the same incident, ordered from oldest to newest.
+Your task is to analyze all of them and create a single, comprehensive, composite EIDO that summarizes and consolidates the information.
+
+Follow these rules:
+1. Use the structure of the first EIDO as a template for the output JSON.
+2. Prioritize the most recent and specific information from the list of EIDOs. For example, if an early report says "vehicle involved" and a later one says "blue Toyota sedan", use the more specific information.
+3. Combine narratives from the 'notesComponent' of all EIDOs into a single, chronological summary in the composite EIDO's 'notesComponent'.
+4. Ensure the final 'incidentStatusCommonRegistryText' reflects the latest status of the incident.
+5. Consolidate all unique people, vehicles, and locations from all reports into the final EIDO.
+6. The final output MUST be a single, valid JSON object and nothing else. Do not include markdown formatting like ```json.
+
+Here is the full history of EIDOs for the incident:
+---
+{eidos_history_str}
+---
+
+Now, generate the single composite EIDO based on the provided history.
+"""
+
+        # 4. Call the LLM
+        try:
+            llm_response = llm_client.generate_content(prompt)
+            clean_response = llm_response.text.strip().replace("```json", "").replace("```", "").strip()
+            composite_eido = json.loads(clean_response)
+        except (json.JSONDecodeError, ValueError) as e:
+            raise HTTPException(status_code=500, detail=f"LLM returned malformed JSON data. Error: {str(e)}\nRaw Response: {llm_response.text}")
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"An error occurred during LLM processing: {str(e)}")
+
+        # 5. Return the composite EIDO
+        return JSONResponse(content=composite_eido, status_code=200)
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An unexpected internal error occurred: {str(e)}")
+
 @app.get("/api/status")
 async def get_status():
     services = {

@@ -38,20 +38,24 @@ async def get_idx_env_settings():
     return current_settings
 
 @router.post("/settings/env")
-async def update_env_settings(new_settings: dict):
+async def update_env_settings(payload: dict):
     """
     Update the .env file with new settings and signal the categorizer to restart.
     """
     try:
+        # <-- FIX: Handle nested payload from dashboard proxy
+        new_settings = payload.get("settings", payload)
+        if not isinstance(new_settings, dict):
+            raise HTTPException(status_code=400, detail="Invalid settings format.")
+
         env_path = find_dotenv()
         if not env_path:
              raise HTTPException(status_code=500, detail=".env file not found.")
 
         for key, value in new_settings.items():
-            if value == "********": continue # Don't update masked values
+            if value == "********": continue
             set_key(env_path, key, str(value))
         
-        # Signal the main process to restart the categorizer to pick up new settings.
         with open("restart_categorizer.flag", "w") as f:
             f.write("restart")
         return {"message": "Settings updated successfully. Categorizer will restart."}
@@ -113,28 +117,21 @@ async def upload_eido(file: UploadFile = File(...)):
         async with httpx.AsyncClient() as client:
             response = await client.post(f"{EIDO_AGENT_URL}/api/v1/ingest", json=eido_data)
             response.raise_for_status()
-            # It's possible the EIDO agent returns a success status but non-JSON body
             return response.json()
     except httpx.HTTPStatusError as e:
-        # Re-raise the error from the downstream service with more context
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except httpx.RequestError as e:
-        # Network-level error
-        raise HTTPException(status_code=502, detail=f"Could not connect to EIDO Agent: {e}")
+        raise HTTPException(status_code=502, detail=f"Error connecting to EIDO Agent: {e}")
     except json.JSONDecodeError:
-        # The EIDO agent returned a success status but the response body was not valid JSON
         raise HTTPException(status_code=502, detail="Received an invalid response from the EIDO Agent.")
     except Exception as e:
-        # Catch any other unexpected errors
         raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
 
 
 from sentence_transformers import SentenceTransformer, util
 
-# Load a pre-trained model for sentence embeddings
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
-# In-memory store for incident embeddings
 incident_embeddings = {}
 
 @router.post("/incidents/{incident_id}/close")
