@@ -1,0 +1,167 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>LLM Settings</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        color: #e0e0e0;
+        line-height: 1.6;
+        padding: 2rem;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: #1a1a1a;
+        padding: 2rem;
+        border-radius: 12px;
+        border: 1px solid #333333;
+      }
+      h1 {
+        font-size: 2rem;
+        font-weight: 700;
+        margin-bottom: 1rem;
+        color: #ffc107;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+      }
+      input,
+      select {
+        width: 100%;
+        padding: 0.75rem;
+        background: #222222;
+        border: 1px solid #444444;
+        border-radius: 6px;
+        color: #e0e0e0;
+        font-size: 1rem;
+      }
+      button {
+        background: #ffc107;
+        color: #000000;
+        border: none;
+        padding: 0.75rem 1.5rem;
+        border-radius: 6px;
+        cursor: pointer;
+        font-weight: 600;
+        transition: all 0.2s ease;
+      }
+      button:hover {
+        background-color: #ffda6a;
+      }
+      .response {
+        margin-top: 2rem;
+        padding: 1rem;
+        background: #222222;
+        border: 1px solid #444444;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>LLM Settings</h1>
+      <div class="form-group">
+        <label for="llm-provider">LLM Provider</label>
+        <select id="llm-provider" onchange="updateForm()">
+          <option value="google">Google</option>
+          <option value="openai">OpenAI</option>
+          <option value="local">Local</option>
+        </select>
+      </div>
+      <div id="google-settings">
+        <div class="form-group">
+          <label for="google-api-key">Google API Key</label>
+          <input
+            type="password"
+            id="google-api-key"
+            placeholder="Enter your Google API Key"
+          />
+        </div>
+      </div>
+      <div id="openai-settings" style="display: none">
+        <div class="form-group">
+          <label for="openai-api-key">OpenAI API Key</label>
+          <input
+            type="password"
+            id="openai-api-key"
+            placeholder="Enter your OpenAI API Key"
+          />
+        </div>
+      </div>
+      <div id="local-settings" style="display: none">
+        <div class="form-group">
+          <label for="local-llm-url">Local LLM URL</label>
+          <input
+            type="text"
+            id="local-llm-url"
+            placeholder="http://localhost:11434"
+          />
+        </div>
+      </div>
+      <button onclick="saveSettings()">Save Settings</button>
+      <div id="response" class="response" style="display: none"></div>
+    </div>
+    <script>
+      function updateForm() {
+        const provider = document.getElementById("llm-provider").value;
+        document.getElementById("google-settings").style.display =
+          provider === "google" ? "block" : "none";
+        document.getElementById("openai-settings").style.display =
+          provider === "openai" ? "block" : "none";
+        document.getElementById("local-settings").style.display =
+          provider === "local" ? "block" : "none";
+      }
+
+      async function saveSettings() {
+        const provider = document.getElementById("llm-provider").value;
+        const googleApiKey = document.getElementById("google-api-key").value;
+        const openaiApiKey = document.getElementById("openai-api-key").value;
+        const localLlmUrl = document.getElementById("local-llm-url").value;
+
+        const settings = {
+          LLM_PROVIDER: provider,
+          GOOGLE_API_KEY: googleApiKey,
+          OPENAI_API_KEY: openaiApiKey,
+          LOCAL_LLM_URL: localLlmUrl,
+        };
+
+        const responseDiv = document.getElementById("response");
+        responseDiv.style.display = "block";
+        responseDiv.innerHTML = "Saving...";
+
+        try {
+          const response = await fetch("/dashboard/api/llm/settings", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(settings),
+          });
+
+          const data = await response.json();
+
+          if (response.ok) {
+            responseDiv.innerHTML = "<h2>Settings Saved Successfully</h2>";
+          } else {
+            responseDiv.innerHTML = "<h2>Error</h2><p>" + data.detail + "</p>";
+          }
+        } catch (error) {
+          responseDiv.innerHTML =
+            "<h2>Error</h2><p>" + error.toString() + "</p>";
+        }
+      }
+    </script>
+  </body>
+</html>

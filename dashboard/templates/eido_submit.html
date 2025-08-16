@@ -1,0 +1,397 @@
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Submit EIDO Report - Sentinel AI</title>
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: "Inter", sans-serif;
+        background: #000000;
+        color: #e0e0e0;
+        line-height: 1.6;
+      }
+      .container {
+        max-width: 900px;
+        margin: 2rem auto;
+        padding: 2rem;
+      }
+      .header {
+        text-align: center;
+        margin-bottom: 2rem;
+      }
+      .header h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+        color: #ffc107;
+      }
+      .header p {
+        color: #aaaaaa;
+        font-size: 1.1rem;
+      }
+      .tabs {
+        display: flex;
+        border-bottom: 1px solid #333333;
+        margin-bottom: 2rem;
+      }
+      .tab-button {
+        background: none;
+        border: none;
+        color: #aaaaaa;
+        padding: 1rem 1.5rem;
+        cursor: pointer;
+        font-size: 1rem;
+        font-weight: 500;
+        transition: all 0.3s ease;
+        border-bottom: 2px solid transparent;
+      }
+      .tab-button.active {
+        color: #ffc107;
+        border-bottom-color: #ffc107;
+      }
+      .tab-content {
+        display: none;
+      }
+      .tab-content.active {
+        display: block;
+      }
+      .form-container {
+        background: #1a1a1a;
+        border: 1px solid #333333;
+        border-radius: 12px;
+        padding: 2rem;
+      }
+      .form-group {
+        margin-bottom: 1.5rem;
+      }
+      .form-label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        color: #e0e0e0;
+      }
+      .form-textarea,
+      .form-select {
+        width: 100%;
+        padding: 1rem;
+        border: 1px solid #444444;
+        border-radius: 8px;
+        font-size: 1rem;
+        background: #222222;
+        color: #e0e0e0;
+        resize: vertical;
+      }
+      .form-textarea {
+        min-height: 200px;
+      }
+      .form-textarea:focus,
+      .form-select:focus {
+        outline: none;
+        border-color: #ffc107;
+      }
+      .file-input-container {
+        border: 2px dashed #555555;
+        border-radius: 8px;
+        padding: 2rem;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .file-input-container:hover {
+        border-color: #ffc107;
+        background: #222222;
+      }
+      .file-input-container i {
+        font-size: 2rem;
+        color: #999;
+        margin-bottom: 1rem;
+      }
+      .file-input-container p {
+        color: #aaaaaa;
+      }
+      #file-upload {
+        display: none;
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid #ffc107;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #ffc107;
+        color: #000000;
+      }
+      .btn:hover {
+        transform: translateY(-2px);
+        background: #ffda6a;
+        border-color: #ffda6a;
+      }
+      .btn i {
+        margin-right: 0.5rem;
+      }
+      .result {
+        display: none;
+        margin-top: 2rem;
+        background: #222222;
+        border: 1px solid #444444;
+        border-radius: 8px;
+        padding: 1.5rem;
+      }
+      .result h3 {
+        margin-bottom: 1rem;
+      }
+      .result pre {
+        background: #111111;
+        padding: 1rem;
+        border-radius: 8px;
+        overflow-x: auto;
+        font-size: 0.9rem;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #e0e0e0;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #1a1a1a;
+        border: 1px solid #333333;
+        border-radius: 8px;
+      }
+      .back-link:hover {
+        border-color: #ffc107;
+        transform: translateX(-5px);
+      }
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <a href="/dashboard/" class="back-link"
+        ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
+      >
+      <div class="header">
+        <h1>Submit Incident Report</h1>
+        <p>Generate or upload an Emergency Incident Data Object (EIDO)</p>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-button active" onclick="openTab(event, 'text')">
+          From Raw Text / File
+        </button>
+        <button class="tab-button" onclick="openTab(event, 'json')">
+          Upload Single EIDO JSON
+        </button>
+      </div>
+
+      <div id="text" class="tab-content active">
+        <div class="form-container">
+          <form id="text-form">
+            <div class="form-group">
+              <label for="template-select" class="form-label"
+                >EIDO Template</label
+              >
+              <select id="template-select" class="form-select">
+                {% for template in templates %}
+                <option value="{{ template }}">
+                  {{ template.replace('.json', '').replace('_', ' ')|title }}
+                </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label"
+                >Upload File with One or More Incidents</label
+              >
+              <div class="file-input-container" id="drop-zone-text">
+                <input type="file" id="text-file-upload" />
+                <i class="fas fa-upload"></i>
+                <p id="file-name-text">
+                  Drag & drop any file here (it will be read as text), or click
+                  to select
+                </p>
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="raw-text" class="form-label"
+                >Or Paste Single Incident Text</label
+              >
+              <textarea
+                id="raw-text"
+                class="form-textarea"
+                placeholder="Paste the raw incident report for a single incident here..."
+              ></textarea>
+            </div>
+            <button type="submit" class="btn">
+              <i class="fas fa-cogs"></i> Process and Ingest
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div id="json" class="tab-content">
+        <div class="form-container">
+          <form id="json-form">
+            <div class="form-group">
+              <label class="form-label">Upload Single EIDO JSON File</label>
+              <div class="file-input-container" id="drop-zone-json">
+                <input
+                  type="file"
+                  id="json-file-upload"
+                  accept=".json"
+                  required
+                />
+                <i class="fas fa-upload"></i>
+                <p id="file-name-json">
+                  Drag & drop a file here, or click to select
+                </p>
+              </div>
+            </div>
+            <button type="submit" class="btn">
+              <i class="fas fa-paper-plane"></i> Ingest EIDO
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <div class="result" id="result-container">
+        <h3>Processing Result:</h3>
+        <pre id="result-json"></pre>
+      </div>
+    </div>
+
+    <script>
+      function openTab(evt, tabName) {
+        document
+          .querySelectorAll(".tab-content")
+          .forEach((tc) => (tc.style.display = "none"));
+        document
+          .querySelectorAll(".tab-button")
+          .forEach((tb) => tb.classList.remove("active"));
+        document.getElementById(tabName).style.display = "block";
+        evt.currentTarget.classList.add("active");
+      }
+
+      const resultContainer = document.getElementById("result-container");
+      const resultJson = document.getElementById("result-json");
+
+      async function submitForm(file, templateName) {
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("template_name", templateName);
+
+        showResult(`Processing ${file.name}... This may take a moment.`, true);
+
+        try {
+          const response = await fetch("/dashboard/api/submit_report", {
+            method: "POST",
+            body: formData,
+          });
+
+          const result = await response.json();
+
+          if (!response.ok) {
+            throw new Error(
+              `Processing failed: ${result.detail || JSON.stringify(result)}`
+            );
+          }
+
+          showResult(JSON.stringify(result, null, 2));
+        } catch (error) {
+          showResult(JSON.stringify({ error: error.message }, null, 2));
+        }
+      }
+
+      // --- Text / File Upload Handling ---
+      const textForm = document.getElementById("text-form");
+      const textFileInput = document.getElementById("text-file-upload");
+      const textDropZone = document.getElementById("drop-zone-text");
+      const textFileNameDisplay = document.getElementById("file-name-text");
+      const rawTextArea = document.getElementById("raw-text");
+
+      textDropZone.addEventListener("click", () => textFileInput.click());
+      textFileInput.addEventListener("change", () => {
+        if (textFileInput.files.length > 0) {
+          textFileNameDisplay.textContent = textFileInput.files[0].name;
+          rawTextArea.value = ""; // Clear textarea if file is selected
+        }
+      });
+
+      textForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const templateName = document.getElementById("template-select").value;
+        const textFile =
+          textFileInput.files.length > 0 ? textFileInput.files[0] : null;
+        const rawText = rawTextArea.value;
+
+        if (textFile) {
+          await submitForm(textFile, templateName);
+        } else if (rawText.trim()) {
+          const textBlob = new Blob([rawText], { type: "text/plain" });
+          const file = new File([textBlob], "incident.txt", {
+            type: "text/plain",
+          });
+          await submitForm(file, templateName);
+        } else {
+          alert("Please select a file or paste some text.");
+        }
+      });
+
+      // --- JSON File Upload Handling ---
+      const jsonForm = document.getElementById("json-form");
+      const jsonFileInput = document.getElementById("json-file-upload");
+      const jsonDropZone = document.getElementById("drop-zone-json");
+      const jsonFileNameDisplay = document.getElementById("file-name-json");
+
+      jsonDropZone.addEventListener("click", () => jsonFileInput.click());
+      jsonFileInput.addEventListener("change", () => {
+        if (jsonFileInput.files.length > 0) {
+          jsonFileNameDisplay.textContent = jsonFileInput.files[0].name;
+        }
+      });
+
+      jsonForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        if (jsonFileInput.files.length === 0) {
+          alert("Please select a JSON file to upload.");
+          return;
+        }
+        const file = jsonFileInput.files[0];
+        // Template name is ignored for direct JSON uploads on the backend
+        await submitForm(file, "general_incident.json");
+      });
+
+      function showResult(content, isLoading = false) {
+        resultContainer.style.display = "block";
+        if (isLoading) {
+          resultJson.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${content}`;
+        } else {
+          resultJson.textContent = content;
+        }
+      }
+    </script>
+  </body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "generate_eido": {
+    "prompt": "You are an expert emergency services data processor. Your task is to analyze the following scenario description and convert it into a structured EIDO (Emergency Incident Data Object) JSON format. The user will provide a scenario and a basic EIDO template to follow. Populate the template with information extracted from the scenario. If information for a field is not present, omit the field or use a sensible default like 'Unknown'. Pay special attention to extracting a detailed description, a geographic location, and the type of incident.\n\nScenario Description:\n'''\n{scenario_description}\n'''\n\nEIDO Template:\n'''\n{eido_template}\n'''\n\nReturn ONLY the populated JSON object. Do not include any extra text or markdown formatting."
+  },
+  "extract_location_clues": {
+    "prompt": "You are a geographic data extraction assistant. Your task is to read the following text from an emergency report and extract any and all potential location clues. This includes street addresses, intersections, building names, landmarks, city names, zip codes, and any other information that could help pinpoint a location.\n\nEmergency Report Text:\n'''\n{text}\n'''\n\nReturn a JSON object with a single key 'clues' containing a list of the extracted location strings."
+  },
+  "geocode_address": {
+    "prompt": "You are an expert geocoding AI. Analyze the provided address string and return its geographic coordinates. If the address is ambiguous, make the best possible guess. \n\nAddress:\n'''\n{address}\n'''\n\nRespond with ONLY a JSON object containing 'latitude' and 'longitude' keys. Example: {\"latitude\": 34.0522, \"longitude\": -118.2437}"
+  }
+}

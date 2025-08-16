@@ -1,0 +1,70 @@
+# fly.toml
+# Fly.io app configuration for EIDO Sentinel
+# See https://fly.io/docs/reference/configuration/ for more information
+
+app = "eido-agent" # This should match your Fly.io app name
+primary_region = "sjc" # Choose a region close to you
+kill_signal = "SIGINT"
+kill_timeout = "5s"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# The [deploy] section is for running tasks like database migrations before a release.
+# It requires a migration tool like Alembic. We'll comment it out to prevent errors.
+# [deploy]
+#   release_command = "alembic upgrade head"
+
+# Environment variables applied to ALL processes.
+# Update these with your app's final URL.
+[env]
+  API_BASE_URL = "https://eido-agent.fly.dev"
+  STREAMLIT_APP_URL = "http://eido-agent.fly.dev:8080"
+  LOG_LEVEL = "INFO"
+  # Supabase Database Configuration (replace with your actual credentials)
+  SUPABASE_URL = "YOUR_SUPABASE_URL"
+  SUPABASE_KEY = "YOUR_SUPABASE_KEY"
+  SUPABASE_DB_URL = "postgresql://postgres:[YOUR-PASSWORD]@db.[YOUR-PROJECT-REF].supabase.co:5432/postgres"
+
+
+# THIS SECTION WAS MISSING.
+# It defines the commands for your process groups.
+# The value (e.g., "api") is passed as an argument to the Docker entrypoint.
+[processes]
+  api = "api"
+  ui  = "ui"
+
+# The `api` service definition.
+[[services]]
+  protocol = "tcp"
+  internal_port = 8000
+  processes = ["api"]  # This now correctly refers to the 'api' process defined above.
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 25
+    soft_limit = 20
+
+  [[services.ports]]
+    port = 80
+    handlers = ["http"]
+    force_https = true
+
+  [[services.ports]]
+    port = 443
+    handlers = ["tls", "http"]
+
+# The `ui` service definition.
+[[services]]
+  protocol = "tcp"
+  internal_port = 8501
+  processes = ["ui"]   # This now correctly refers to the 'ui' process defined above.
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 20
+    soft_limit = 15
+
+  [[services.ports]]
+    port = 8080 # The single public port for the UI
+    handlers = ["http", "tls"] # Fly will handle HTTP and TLS termination on this port

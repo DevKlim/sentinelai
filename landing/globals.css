@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 45 100% 50%; /* Honey Yellow */
+    --foreground: 0 0% 0%; /* Black */
+
+    --card: 45 100% 50%;
+    --card-foreground: 0 0% 0%;
+
+    --popover: 45 100% 50%;
+    --popover-foreground: 0 0% 0%;
+
+    --primary: 0 0% 0%; /* Black */
+    --primary-foreground: 45 100% 50%; /* Honey Yellow */
+
+    --secondary: 45 100% 95%; /* Very light yellow/off-white */
+    --secondary-foreground: 0 0% 10%; /* Dark grey */
+
+    --muted: 45 100% 90%; /* Light yellow */
+    --muted-foreground: 0 0% 25%; /* Mid grey */
+
+    --accent: 45 100% 95%; /* Very light yellow/off-white */
+    --accent-foreground: 0 0% 10%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 0%; /* Black text on red */
+
+    --border: 0 0% 15%; /* Dark grey border */
+    --input: 0 0% 15%; /* Dark grey input */
+    --ring: 0 0% 0%; /* Black ring */
+
+    --radius: 0.5rem;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* A subtle gradient from a lighter yellow to the main honey yellow */
+    background-image: radial-gradient(
+      circle at top,
+      hsl(45 100% 60%) 0%,
+      hsl(var(--background)) 40%
+    );
+  }
+  .text-shadow {
+    text-shadow: 0 1px 2px rgba(255, 255, 255, 0.2);
+  }
+  .text-shadow-lg {
+    text-shadow: 0 2px 5px rgba(255, 255, 255, 0.2);
+  }
+}
+
+@layer utilities {
+  .glass {
+    @apply bg-black/30 backdrop-blur-md;
+    border: 1px solid;
+    @apply border-white/10;
+  }
+
+  @keyframes spin-slow {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .animate-spin-slow {
+    animation: spin-slow 20s linear infinite;
+  }
+
+  .text-glow {
+    /* A subtle white glow that might work on yellow */
+    text-shadow: 0 0 8px hsl(0 0% 100% / 0.5);
+  }
+
+  /* This animation drives the single scrolling text component */
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+
+  .animate-marquee {
+    animation: marquee 60s linear infinite;
+  }
+}

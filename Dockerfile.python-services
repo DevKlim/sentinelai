@@ -1,0 +1,30 @@
+# sdsc-orchestrator/Dockerfile.python-services
+# Base image
+FROM python:3.10-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies, including dos2unix to fix line endings
+RUN apt-get update && apt-get install -y \
+    tesseract-ocr \
+    dos2unix \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy requirements and install Python dependencies
+COPY requirements.python-services.txt .
+RUN pip install --no-cache-dir -r requirements.python-services.txt
+
+# Copy application code for both agents
+COPY eido-agent /app/eido-agent
+COPY idx-agent /app/idx-agent
+
+# Expose ports for the two API services
+EXPOSE 8000 8001
+
+# Copy the run script, fix its line endings, and make it executable
+COPY run-services.sh /app/
+RUN dos2unix /app/run-services.sh && chmod +x /app/run-services.sh
+
+# Command to run the script
+CMD ["/app/run-services.sh"]

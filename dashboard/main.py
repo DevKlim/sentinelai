@@ -1,0 +1,505 @@
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
+from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
+from fastapi.templating import Jinja2Templates
+import httpx
+import os
+import json
+import io
+import zipfile
+from collections import defaultdict
+from datetime import datetime, timedelta, timezone
+import random
+from pydantic import BaseModel
+from typing import Dict, Any, List, Optional
+from dotenv import load_dotenv
+import google.generativeai as genai
+import traceback
+
+# Load environment variables from a .env file if it exists
+load_dotenv()
+
+app = FastAPI()
+templates = Jinja2Templates(directory="templates")
+templates.env.filters['tojson'] = json.dumps
+
+# --- In-memory Configuration Store ---
+config = {
+    "EIDO_API_URL": os.environ.get("EIDO_API_URL", "http://python-services:8000"),
+    "IDX_API_URL": os.environ.get("IDX_API_URL", "http://python-services:8001"),
+    "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
+}
+llm_client = None
+
+def initialize_llm_client():
+    """Initializes the Google Generative AI client if an API key is available."""
+    global llm_client
+    api_key = config.get("GOOGLE_API_KEY")
+    if api_key:
+        try:
+            genai.configure(api_key=api_key)
+            llm_client = genai.GenerativeModel('gemini-1.5-flash-latest')
+            print("Dashboard: Successfully initialized Google Generative AI client.")
+        except Exception as e:
+            llm_client = None
+            print(f"Dashboard: Failed to initialize Google Generative AI client: {e}")
+    else:
+        llm_client = None
+        print("Dashboard: GOOGLE_API_KEY not found. Bulk processing features will be disabled.")
+
+@app.on_event("startup")
+async def startup_event():
+    """On application startup, initialize the LLM client."""
+    initialize_llm_client()
+
+
+class SettingsUpdate(BaseModel):
+    settings: Dict[str, Any]
+
+class DashboardSettings(BaseModel):
+    EIDO_API_URL: str
+    IDX_API_URL: str
+    GOOGLE_API_KEY: Optional[str]
+
+# --- Core Endpoints ---
+
+@app.get("/", response_class=HTMLResponse)
+async def read_dashboard(request: Request):
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/incident/{incident_id}", response_class=HTMLResponse)
+async def get_incident_details(request: Request, incident_id: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=30.0
+            )
+            response.raise_for_status()
+            incident_data = response.json()
+            return templates.TemplateResponse("incident_details.html", {
+                "request": request,
+                "incident": incident_data
+            })
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+async def ingest_eido(client: httpx.AsyncClient, eido_to_ingest: dict, source: str):
+    """Helper function to ingest a single EIDO."""
+    ingest_payload = {
+        "source": source,
+        "original_eido": eido_to_ingest
+    }
+    ingest_url = f"{config['EIDO_API_URL']}/api/v1/ingest"
+    ingest_response = await client.post(ingest_url, json=ingest_payload)
+    ingest_response.raise_for_status()
+    return ingest_response.json()
+
+@app.post("/api/submit_report", response_class=JSONResponse)
+async def submit_report(
+    file: UploadFile = File(...),
+    template_name: str = Form("general_incident.json")
+):
+    """
+    Processes an uploaded file.
+    - Tries to ingest it as a single EIDO JSON first.
+    - If that fails, it treats the file as raw text for LLM-based processing.
+    """
+    file_content = await file.read()
+    
+    try:
+        async with httpx.AsyncClient(timeout=300.0) as client:
+            if file.content_type == "application/json" and not file.filename.endswith(".jsonl"):
+                try:
+                    eido_to_ingest = json.loads(file_content)
+                    result = await ingest_eido(client, eido_to_ingest, f"dashboard-upload:{file.filename}")
+                    return JSONResponse(content=result, status_code=200)
+                except json.JSONDecodeError:
+                    pass
+            
+            if not llm_client:
+                raise HTTPException(status_code=503, detail="LLM client not configured. Cannot process raw text file.")
+            
+            try:
+                raw_text = file_content.decode('utf-8')
+            except UnicodeDecodeError:
+                raise HTTPException(status_code=400, detail="The uploaded file could not be read as text. Please upload a text-based file.")
+
+            prompt = f"""
+You are an AI data processor. You will receive a block of text which may contain one or more distinct incident reports. Your task is to split this text into individual reports.
+Here is the text:
+---
+{raw_text}
+---
+Return a JSON object with a single key 'reports', which is a list of strings. Each string in the list should be a complete, distinct incident report. Do not include reports that are empty or just whitespace.
+"""
+            try:
+                response = llm_client.generate_content(prompt)
+                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+                split_result = json.loads(clean_response)
+                
+                llm_reports = split_result.get("reports", [])
+                if not isinstance(llm_reports, list):
+                    raise ValueError("'reports' key in LLM response is not a list.")
+
+                incident_texts = [
+                    report for report in llm_reports 
+                    if isinstance(report, str) and report.strip()
+                ]
+
+            except (json.JSONDecodeError, ValueError) as e:
+                raise HTTPException(status_code=500, detail=f"LLM returned malformed data. Error: {str(e)}")
+            except Exception as e:
+                raise HTTPException(status_code=500, detail=f"An error occurred during LLM processing: {str(e)}")
+
+            if not incident_texts:
+                raise HTTPException(status_code=400, detail="LLM could not identify any valid, non-empty incident reports in the file.")
+
+            gen_url = f"{config['EIDO_API_URL']}/api/v1/generate_eido_from_template"
+            results = []
+            for i, text in enumerate(incident_texts):
+                scenario_description = text
+                try:
+                    # If the report text is a JSON object (from a .jsonl file),
+                    # extract the 'Transcript' field for more precise processing.
+                    report_data = json.loads(text)
+                    if isinstance(report_data, dict) and 'Transcript' in report_data:
+                        scenario_description = report_data['Transcript']
+                except json.JSONDecodeError:
+                    # It's not a JSON string, so it's likely a plain text report.
+                    # We'll use the text as is.
+                    pass
+
+                gen_payload = {"template_name": template_name, "scenario_description": scenario_description}
+                gen_response = await client.post(gen_url, json=gen_payload)
+                gen_response.raise_for_status()
+                eido_to_ingest = gen_response.json().get("generated_eido")
+                
+                if eido_to_ingest:
+                    ingest_result = await ingest_eido(client, eido_to_ingest, f"dashboard-bulk-upload:{file.filename}-part-{i+1}")
+                    results.append(ingest_result)
+            
+            return JSONResponse(content={"processed_reports": len(results), "results": results})
+
+    except httpx.HTTPStatusError as e:
+        error_detail = e.response.text or f"Received status {e.response.status_code} with no error detail."
+        # Attempt to parse the detail as JSON to get the nested error
+        try:
+            nested_error = json.loads(error_detail)
+            error_message = nested_error.get("detail", error_detail)
+        except json.JSONDecodeError:
+            error_message = error_detail
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {error_message}")
+    except httpx.RequestError as e:
+        raise HTTPException(status_code=502, detail=f"Could not connect to EIDO Agent: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An unexpected internal error occurred: {type(e).__name__}")
+
+
+@app.delete("/api/incidents/{incident_id}", status_code=204)
+async def delete_incident(incident_id: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=None, status_code=204)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/eido/submit", response_class=HTMLResponse)
+async def eido_submit_page(request: Request):
+    templates_available = ["general_incident.json", "fire_incident.json"]
+    return templates.TemplateResponse("eido_submit.html", {"request": request, "templates": templates_available})
+
+@app.get("/idx/search", response_class=HTMLResponse)
+async def idx_search_page(request: Request):
+    return templates.TemplateResponse("idx_search.html", {"request": request})
+
+@app.post("/api/incidents/{incident_id}/close", response_class=JSONResponse)
+async def close_incident_endpoint(incident_id: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['IDX_API_URL']}/api/v1/incidents/{incident_id}/close", timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=e.response.text)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/incidents/{incident_id}/tags")
+async def add_incident_tag(incident_id: str, request: Request):
+    try:
+        tag_data = await request.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}/tags",
+                json=tag_data,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/incidents/{incident_id}/download")
+async def download_incident_zip(incident_id: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=30.0
+            )
+            response.raise_for_status()
+            incident = response.json()
+        reports = incident.get("reports", [])
+        if not reports:
+            raise HTTPException(status_code=404, detail="No EIDO reports found for this incident.")
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:
+            for i, report in enumerate(reports):
+                report_id = report.get("id", f"report_{i+1}")
+                eido_json = report.get("original_eido")
+                if eido_json:
+                    file_name = f"eido_report_{report_id}.json"
+                    json_str = json.dumps(eido_json, indent=2)
+                    zip_file.writestr(file_name, json_str.encode('utf-8'))
+        zip_buffer.seek(0)
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={"Content-Disposition": f"attachment; filename=incident_{incident_id}_eidos.zip"}
+        )
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/api/status")
+async def get_status():
+    services = {
+        "eido_api": {"url": f"{config['EIDO_API_URL']}/health", "name": "EIDO API"},
+        "idx_api": {"url": f"{config['IDX_API_URL']}/health", "name": "IDX API"},
+    }
+    status = {}
+    async with httpx.AsyncClient() as client:
+        for service_id, service in services.items():
+            start_time = datetime.now()
+            try:
+                response = await client.get(service["url"], timeout=5.0)
+                response.raise_for_status()
+                status[service_id] = {"name": service["name"], "status": "online", "response_time": (datetime.now() - start_time).total_seconds()}
+            except Exception as e:
+                status[service_id] = {"name": service["name"], "status": "offline", "error": str(e), "response_time": None}
+    return JSONResponse(content=status)
+
+@app.get("/api/analytics/incidents")
+async def get_incident_analytics():
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['EIDO_API_URL']}/api/v1/incidents", timeout=10.0)
+            response.raise_for_status()
+            incidents = response.json()
+        total_incidents = len(incidents)
+        active_incidents = len([i for i in incidents if i.get('status', '').lower() == 'open'])
+        type_distribution = defaultdict(int)
+        now = datetime.now(timezone.utc)
+        last_24h = now - timedelta(days=1)
+        incidents_24h = 0
+        for incident in incidents:
+            type_distribution[incident.get('incident_type', 'Unknown')] += 1
+            created_at_str = incident.get('created_at')
+            if created_at_str:
+                try:
+                    created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                    if created_at.tzinfo is None: created_at = created_at.replace(tzinfo=timezone.utc)
+                    if created_at > last_24h: incidents_24h += 1
+                except (ValueError, TypeError): pass
+        return JSONResponse(content={
+            "total_incidents": total_incidents, "active_incidents": active_incidents,
+            "incidents_24h": incidents_24h, "type_distribution": dict(type_distribution),
+            "incidents": incidents,
+        })
+    except Exception as e:
+        return JSONResponse(content={"error": f"Analytics error: {str(e)}"}, status_code=500)
+
+@app.get("/api/analytics/response-times")
+async def get_response_time_analytics():
+    return JSONResponse(content={
+        "average_response_time_minutes": round(random.uniform(5, 20), 1),
+        "min_response_time_minutes": round(random.uniform(1, 5), 1),
+        "max_response_time_minutes": round(random.uniform(20, 60), 1),
+        "total_incidents_analyzed": random.randint(50, 200),
+    })
+    
+@app.get("/api/analytics/trends")
+async def get_trends():
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['EIDO_API_URL']}/api/v1/incidents", timeout=10.0)
+            response.raise_for_status()
+            incidents = response.json()
+        now = datetime.now(timezone.utc)
+        start_date = now - timedelta(days=29)
+        daily_counts_map = defaultdict(int)
+        for incident in incidents:
+            created_at_str = incident.get('created_at')
+            if created_at_str:
+                try:
+                    created_at = datetime.fromisoformat(created_at_str.replace('Z', '+00:00'))
+                    if created_at.tzinfo is None: created_at = created_at.replace(tzinfo=timezone.utc)
+                    if created_at >= start_date:
+                        daily_counts_map[created_at.strftime('%Y-%m-%d')] += 1
+                except (ValueError, TypeError): pass
+        dates = [(start_date + timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
+        counts = [daily_counts_map[day_str] for day_str in dates]
+        return JSONResponse(content={"daily_counts": {"dates": dates, "counts": counts}})
+    except Exception as e:
+        dates = [(datetime.now() - timedelta(days=i)).strftime('%Y-%m-%d') for i in range(30)]
+        dates.reverse()
+        return JSONResponse(content={"daily_counts": {"dates": dates, "counts": [0]*30}, "error": f"Analytics error: {str(e)}"})
+
+# --- Settings Page and API ---
+
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request):
+    return templates.TemplateResponse("settings.html", {"request": request})
+
+@app.get("/api/settings/dashboard", response_model=DashboardSettings)
+async def get_dashboard_settings():
+    """Gets current dashboard-level settings."""
+    masked_key = config.get("GOOGLE_API_KEY")
+    if masked_key:
+        masked_key = "********"
+    return {
+        "EIDO_API_URL": config["EIDO_API_URL"],
+        "IDX_API_URL": config["IDX_API_URL"],
+        "GOOGLE_API_KEY": masked_key
+    }
+
+@app.post("/api/settings/dashboard", response_model=dict)
+async def update_dashboard_settings(new_settings: DashboardSettings):
+    """Updates dashboard-level settings and re-initializes clients."""
+    global config
+    config["EIDO_API_URL"] = new_settings.EIDO_API_URL
+    config["IDX_API_URL"] = new_settings.IDX_API_URL
+    # Only update API key if it's not the masked value
+    if new_settings.GOOGLE_API_KEY and new_settings.GOOGLE_API_KEY != "********":
+        config["GOOGLE_API_KEY"] = new_settings.GOOGLE_API_KEY
+        initialize_llm_client() # Re-initialize with new key
+    return {"message": "Dashboard settings updated successfully."}
+
+@app.get("/api/settings/agent/{agent}")
+async def get_agent_settings(agent: str):
+    if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
+    elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
+    else: raise HTTPException(status_code=404, detail="Agent not found")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(url, timeout=10.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not connect to {agent} agent: {e}")
+
+@app.post("/api/settings/agent/{agent}")
+async def update_agent_settings(agent: str, payload: SettingsUpdate):
+    if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
+    elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
+    else: raise HTTPException(status_code=404, detail="Agent not found")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(url, json=payload.dict(), timeout=15.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not update settings on {agent} agent: {e}")
+
+@app.get("/api/settings/idx/categorizer/status")
+async def get_categorizer_status():
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['IDX_API_URL']}/api/v1/settings/categorizer/status", timeout=10.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not get categorizer status from IDX agent: {e}")
+
+@app.post("/api/settings/idx/categorizer/toggle")
+async def toggle_categorizer(request: Request):
+    body = await request.json()
+    enable = body.get('enable')
+    if enable is None: raise HTTPException(status_code=400, detail="Missing 'enable' parameter.")
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{config['IDX_API_URL']}/api/v1/settings/categorizer/toggle", json={"enable": enable}, timeout=15.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not toggle categorizer on IDX agent: {e}")
+        
+# --- EIDO Management Page and API ---
+
+@app.get("/eido/manage", response_class=HTMLResponse)
+async def eido_management_page(request: Request):
+    active_incidents = []
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['EIDO_API_URL']}/api/v1/incidents?status=open", timeout=10.0)
+            response.raise_for_status()
+            active_incidents = response.json()
+    except Exception as e:
+        print(f"Could not fetch active incidents for EIDO management page: {e}")
+    
+    return templates.TemplateResponse("eido_management.html", {
+        "request": request,
+        "active_incidents": active_incidents
+    })
+
+@app.get("/api/eidos")
+async def get_all_eidos_proxy(status: Optional[str] = None):
+    try:
+        params = {"status": status} if status else {}
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['EIDO_API_URL']}/api/v1/eidos", params=params, timeout=30.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/eidos/bulk-actions")
+async def eido_bulk_actions_proxy(request: Request):
+    try:
+        payload = await request.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{config['EIDO_API_URL']}/api/v1/eidos/bulk-actions", json=payload, timeout=60.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.delete("/api/eidos/{eido_id}", status_code=204)
+async def delete_single_eido_proxy(eido_id: str):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(f"{config['EIDO_API_URL']}/api/v1/eidos/{eido_id}", timeout=15.0)
+            response.raise_for_status()
+            return JSONResponse(content=None, status_code=204)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

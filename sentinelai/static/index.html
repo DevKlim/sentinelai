@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sentinel AI - 911 Emergency Response System</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 50px;
+        }
+        
+        .header h1 {
+            font-size: 3rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            font-size: 1.2rem;
+            opacity: 0.9;
+        }
+        
+        .services-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 30px;
+            margin-bottom: 50px;
+        }
+        
+        .service-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .service-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
+        }
+        
+        .service-card h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.8rem;
+        }
+        
+        .service-card p {
+            margin-bottom: 20px;
+            color: #666;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 12px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 25px;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+        
+        .btn:hover {
+            transform: scale(1.05);
+        }
+        
+        .features {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        .features h2 {
+            text-align: center;
+            color: #667eea;
+            margin-bottom: 30px;
+            font-size: 2rem;
+        }
+        
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+        }
+        
+        .feature {
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .feature h3 {
+            color: #764ba2;
+            margin-bottom: 10px;
+        }
+        
+        .status {
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: center;
+            color: white;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #4CAF50;
+            margin-right: 10px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Sentinel AI</h1>
+            <p>911 Emergency Response System</p>
+        </div>
+        
+        <div class="services-grid">
+            <div class="service-card">
+                <h2>EIDO Agent</h2>
+                <p>Intelligent 911 report processing and EIDO JSON generation. Converts emergency calls into structured data for efficient response coordination.</p>
+                <a href="http://localhost:8502" class="btn" target="_blank">Launch EIDO Agent</a>
+            </div>
+            
+            <div class="service-card">
+                <h2>IDX Agent</h2>
+                <p>Advanced incident analysis and indexing system. Provides intelligent search and retrieval capabilities for emergency response data.</p>
+                <a href="http://localhost:8503" class="btn" target="_blank">Launch IDX Agent</a>
+            </div>
+        </div>
+        
+        <div class="features">
+            <h2>Key Features</h2>
+            <div class="features-grid">
+                <div class="feature">
+                    <h3> AI-Powered Processing</h3>
+                    <p>Advanced natural language processing for emergency call analysis</p>
+                </div>
+                <div class="feature">
+                    <h3> Structured Data</h3>
+                    <p>Automatic conversion to EIDO JSON format for interoperability</p>
+                </div>
+                <div class="feature">
+                    <h3> Real-time Response</h3>
+                    <p>Instant processing and routing of emergency information</p>
+                </div>
+                <div class="feature">
+                    <h3> System Integration</h3>
+                    <p>Seamless integration with existing emergency response systems</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="status">
+            <span class="status-indicator"></span>
+            <strong>System Status: Online</strong>
+            <p style="margin-top: 10px; opacity: 0.8;">All services are running and ready to process emergency reports</p>
+        </div>
+    </div>
+    
+    <script>
+        // Check service status
+        async function checkStatus() {
+            const services = [
+                { name: 'EIDO API', url: 'http://localhost:8004' },
+                { name: 'IDX API', url: 'http://localhost:8002' },
+                { name: 'Main API', url: 'http://localhost:5000' }
+            ];
+            
+            for (const service of services) {
+                try {
+                    const response = await fetch(service.url);
+                    console.log(`${service.name}: Online`);
+                } catch (error) {
+                    console.log(`${service.name}: Offline`);
+                }
+            }
+        }
+        
+        // Check status on page load
+        checkStatus();
+    </script>
+</body>
+</html> 

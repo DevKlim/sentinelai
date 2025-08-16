@@ -1,0 +1,91 @@
+# Resume Highlights
+
+This document outlines key accomplishments and skills demonstrated through the projects in this repository.
+
+## Leadership & Mentorship
+
+*   **Guided Intern Team to Success:** Led and mentored a team of interns in the development of a critical component of the emergency response pipeline: a Whisper-based voice-to-text model for 911 calls. This involved providing technical guidance, project management, and fostering a collaborative learning environment. The successful completion of this project under my leadership demonstrates strong mentorship and team leadership skills.
+
+## AI/ML Engineering
+
+*   **Fine-tuned and Deployed LLMs for Geocoding:** Developed and deployed a fine-tuned Large Language Model for high-accuracy geocoding of incident data. This involved data processing, model fine-tuning, and deployment as a containerized service.
+*   **Real-Time 911 Call Transcription:** Architected and trained a voice-to-text model using Whisper for real-time transcription of 911 calls. This model is a core component of the emergency response pipeline.
+*   **Duplicate Incident Detection:** Built a system to identify and respond to duplicate emergency incidents, optimizing resource allocation for emergency services.
+*   **Real-Time Alert System:** Developed a system for generating real-time alerts from incoming data streams, enabling faster response times.
+*   **EIDO Standardization:** Worked extensively with the Emergency Incident Data Object (EIDO) standard, developing tools for parsing and generating EIDO-compliant data.
+
+## Software Engineering & DevOps
+
+*   **Microservices Orchestration:** Designed and orchestrated a complex system of microservices for a complete emergency response data pipeline. This involved using Docker for containerization and Nginx for routing.
+*   **Full-Stack Development:** Developed both front-end and back-end components of the system, including a web dashboard for monitoring and data visualization.
+*   **API Development:** Built and deployed numerous APIs for services within the ecosystem, facilitating communication and data exchange between components.
+*   **CI/CD and Automation:** Implemented automated scripts for building, testing, and deploying services, streamlining the development lifecycle.
+
+## Technical Deep Dive
+
+### AI/ML
+
+*   **Model:** Fine-tuned OpenAI Whisper Base (74M parameters) for specialized emergency call transcription.
+*   **Accuracy:** Achieved a Word Error Rate (WER) of 1.2201 on a dataset of 707 full-length emergency 911 calls.
+*   **Performance:** Optimized the model for real-time performance, achieving a 0.05x real-time factor (processing a 10-second audio chunk in ~0.3 seconds).
+*   **Customization:** Enhanced the model with a custom loss function that applies a 2.0x weight to over 40 emergency-specific keywords, significantly improving the detection of critical information.
+*   **Audio Processing:** Implemented a robust audio processing pipeline including noise reduction (spectral subtraction), vocal enhancement, Voice Activity Detection (VAD), and support for multiple audio formats (WAV, MP3, M4A, FLAC).
+*   **Training Pipeline:** Built a comprehensive training pipeline featuring data augmentation (pitch shifting, speed changes, noise injection) and detailed evaluation metrics (WER, CER).
+*   **Distribution:** Engineered a smart model distribution system using HuggingFace Hub, eliminating the need for Git LFS and enabling automated downloads with failover options.
+
+### Software Architecture & DevOps
+
+*   **Microservices:** Designed and implemented a multi-container architecture using Docker and Docker Compose to orchestrate a suite of Python-based microservices.
+*   **Services:**
+    *   **`python-services`:** A container running multiple Python services, including a FastAPI-based API.
+    *   **`eido_db`:** A PostgreSQL database for storing incident data.
+    *   **`dashboard`:** A Streamlit-based web dashboard for data visualization and monitoring.
+    *   **`landing`:** A modern, investor-ready landing page.
+*   **API Gateway:** Utilized Nginx as a reverse proxy and API gateway to route traffic to the appropriate services.
+*   **Database:** Employed a PostgreSQL database with a healthcheck to ensure service availability.
+*   **Environment Management:** Utilized `.env` files for secure management of environment variables and API keys.
+*   **Scalability:** The microservices architecture is designed for scalability and maintainability, allowing for individual components to be updated and scaled independently.
+
+### Web Development
+
+*   **Frontend:** Developed interactive web interfaces using Streamlit, providing a user-friendly way to interact with the AI models and view data.
+*   **Backend:** Built RESTful APIs using FastAPI to expose the functionality of the AI models and data services.
+*   **Real-Time Features:** Implemented real-time transcription with live microphone input and a demonstration mode for showcasing the system's capabilities.
+*   **UI/UX:** Designed a professional and intuitive web interface with multiple tabs for different functionalities, including file uploads, live recording, and model information.
+
+## Technology Stack
+
+### AI & Machine Learning
+
+*   **PyTorch:** Core deep learning framework for model training and inference.
+*   **Hugging Face Transformers:** Utilized for accessing and fine-tuning the Whisper model.
+*   **Hugging Face PEFT (Parameter-Efficient Fine-Tuning):** Employed for efficient fine-tuning of the language model.
+*   **Accelerate:** A library from Hugging Face to simplify distributed training and inference.
+*   **BitsAndBytes:** Used for 8-bit optimizers and quantization to reduce memory footprint.
+*   **Loralib:** Implemented LoRA (Low-Rank Adaptation) for efficient fine-tuning.
+*   **Datasets:** Used for loading and processing the training data.
+*   **Librosa & SciPy:** Core libraries for audio processing and analysis.
+*   **Scikit-learn:** Used for machine learning utilities and evaluation metrics.
+*   **WandB (Weights & Biases):** Integrated for experiment tracking, visualization, and model logging.
+
+### Backend & API
+
+*   **FastAPI:** A modern, high-performance web framework for building RESTful APIs.
+*   **Uvicorn:** An ASGI server for running FastAPI applications.
+*   **Pydantic:** Used for data validation and settings management.
+*   **PostgreSQL:** A powerful, open-source object-relational database system.
+
+### Frontend & Data Visualization
+
+*   **Streamlit:** A fast and easy way to build and share data apps.
+*   **Gradio:** Used to create simple web interfaces for machine learning models.
+*   **Matplotlib & Seaborn:** Core libraries for creating static, animated, and interactive visualizations.
+*   **PostCSS:** A tool for transforming CSS with JavaScript plugins.
+
+### Audio Processing
+
+*   **Pydub:** A simple and high-level interface for audio manipulation.
+*   **webrtcvad-wheels:** A library for voice activity detection.
+*   **Sounddevice:** Used for recording and playing audio.
+*   **Spleeter:** A library for audio source separation.
+*   **ultimate-vocal-remover:** A tool for vocal removal from audio tracks.

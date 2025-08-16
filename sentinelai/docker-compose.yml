@@ -1,0 +1,141 @@
+networks:
+  sds_network:
+    driver: bridge
+
+services:
+  web:
+    build: .
+    ports:
+      - "80:80"
+    volumes:
+      - .:/app
+    depends_on:
+      - api
+      - eido_api
+      - idx_api
+    networks:
+      - sds_network
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    command: uvicorn main:app --host 0.0.0.0 --port 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - .:/app
+    networks:
+      - sds_network
+
+  eido_db:
+    image: postgres
+    restart: always
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=eido_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - sds_network
+
+  eido_api:
+    build:
+      context: ../eido-agent
+    command: ["api"]
+    volumes:
+      - ../eido-agent:/app
+    ports:
+      - "8004:8000"
+    depends_on:
+      - eido_db
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://user:password@eido_db/eido_db
+      - LLM_PROVIDER=openrouter
+      - OPENROUTER_API_KEY=
+      - PORT=8000
+    networks:
+      - sds_network
+
+  eido_streamlit:
+    build:
+      context: ../eido-agent
+    command: ["ui"]
+    volumes:
+      - ../eido-agent:/app
+    ports:
+      - "8502:8501"
+    depends_on:
+      - eido_api
+    environment:
+      - API_BASE_URL=http://eido_api:8000
+      - PORT=8501
+    networks:
+      - sds_network
+
+  idx_api:
+    build:
+      context: ../idx-agent
+    command: [ "api" ]
+    env_file:
+      - ../idx-agent/.env
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8002
+      - DOCKER_ENV=true
+    volumes:
+      - ../idx-agent/data:/app/data
+    ports:
+      - "8002:8002"
+    networks:
+      - sds_network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8002/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  idx_ui:
+    build:
+      context: ../idx-agent
+    command: ["ui"]
+    depends_on:
+      idx_api:
+        condition: service_healthy
+    env_file:
+      - ../idx-agent/.env
+    environment:
+      - API_BASE_URL=http://idx_api:8002
+      - STREAMLIT_SERVER_PORT=8502
+      - DOCKER_ENV=true
+    ports:
+      - "8503:8502"
+    networks:
+      - sds_network
+
+  dashboard:
+    build:
+      context: ./dashboard
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./dashboard:/app
+    depends_on:
+      - eido_api
+      - idx_api
+    networks:
+      - sds_network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - sds_network
+
+volumes:
+  postgres_data:
