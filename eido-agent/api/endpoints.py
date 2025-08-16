@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Body, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 import uuid
+from pydantic import BaseModel
 
 from database.session import get_db
 from data_models.schemas import (
@@ -10,13 +11,14 @@ from data_models.schemas import (
 )
 from services import database as db_service
 from services import eido_retriever
-from agent.llm_interface import LLMInterface
-from config import settings
+from agent.llm_interface import llm_interface # Import the singleton instance
+from config.settings import settings
 from dotenv import set_key, get_key, find_dotenv
 
 router = APIRouter(prefix="/api/v1", tags=["EIDO", "Incidents"])
 
-llm_interface = LLMInterface()
+class RenameRequest(BaseModel):
+    name: str
 
 @router.get("/settings/env", response_model=dict)
 async def get_eido_env_settings():
@@ -41,15 +43,21 @@ async def get_eido_env_settings():
     return current_settings
 
 @router.post("/settings/env")
-async def update_env_settings(new_settings: dict = Body(...)):
+async def update_env_settings(payload: dict = Body(...)):
     """Update the .env file with new settings and re-initialize clients."""
+    # Handle nested payload from dashboard proxy
+    new_settings = payload.get("settings", payload)
+    if not isinstance(new_settings, dict):
+        raise HTTPException(status_code=400, detail="Invalid settings format.")
+
     try:
         env_path = find_dotenv()
         if not env_path:
              raise HTTPException(status_code=500, detail=".env file not found.")
 
         for key, value in new_settings.items():
-            if value == "********": continue # Don't update masked values
+            # Don't update with masked value or if value is None
+            if value == "********" or value is None: continue 
             set_key(env_path, key, str(value))
         
         settings.reload()
@@ -143,10 +151,8 @@ async def add_tag_to_incident(incident_id: uuid.UUID, request: TagRequest, db: A
     incident = await db_service.add_tag_to_incident(db, str(incident_id), request.tag)
     if not incident:
         raise HTTPException(status_code=404, detail="Incident not found")
-    # This returns the DB model, but the endpoint expects a Pydantic model.
-    # For a minimal fix, we'll refetch the public view.
-    public_incident = await db_service.get_all_incidents(db)
-    for p_inc in public_incident:
+    public_incidents = await db_service.get_all_incidents(db)
+    for p_inc in public_incidents:
         if p_inc.incident_id == str(incident_id):
             return p_inc
     raise HTTPException(status_code=404, detail="Incident not found after tagging.")
@@ -177,6 +183,20 @@ async def link_eido_to_incident_endpoint(request: LinkEidoRequest, db: AsyncSess
     if not incident_id:
         raise HTTPException(status_code=404, detail="EIDO report not found or linking failed.")
     return {"message": "EIDO linked successfully", "incident_id": incident_id}
+
+@router.post("/incidents/{incident_id}/rename", response_model=IncidentPublic)
+async def rename_incident_endpoint(incident_id: uuid.UUID, request: RenameRequest, db: AsyncSession = Depends(get_db)):
+    """Renames an incident."""
+    incident = await db_service.rename_incident(db, str(incident_id), request.name)
+    if not incident:
+        raise HTTPException(status_code=404, detail="Incident not found")
+    
+    # This pattern is inefficient but consistent with other endpoints in the file.
+    public_incidents = await db_service.get_all_incidents(db)
+    for p_inc in public_incidents:
+        if p_inc.incident_id == str(incident_id):
+            return p_inc
+    raise HTTPException(status_code=404, detail="Incident not found after renaming.")
 
 @router.get("/eidos", response_model=List[EidoReportPublic])
 async def get_all_eidos(

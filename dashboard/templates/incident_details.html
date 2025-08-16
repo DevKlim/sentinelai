@@ -265,7 +265,8 @@
         display: flex;
         gap: 0.5rem;
       }
-      #new-tag-input {
+      #new-tag-input,
+      #new-name-input {
         flex-grow: 1;
         padding: 0.5rem;
         border-radius: 6px;
@@ -307,7 +308,7 @@
       </a>
       <div class="header">
         <div class="header-info">
-          <h1>{{ incident.name }}</h1>
+          <h1 id="incident-title">{{ incident.name }}</h1>
           <p>
             Status: <span id="incident-status">{{ incident.status }}</span> |
             Type: {{ incident.incident_type }}
@@ -402,6 +403,26 @@
 
         <div class="incident-card">
           <h2><i class="fas fa-cogs"></i> Manage Incident</h2>
+
+          <div class="management-section">
+            <h4>Rename Incident</h4>
+            <div class="add-tag-form">
+              <input
+                type="text"
+                id="new-name-input"
+                placeholder="Enter new incident name"
+                value="{{ incident.name }}"
+                onkeyup="if(event.keyCode===13) renameIncident('{{ incident.incident_id }}')"
+              />
+              <button
+                class="action-btn"
+                onclick="renameIncident('{{ incident.incident_id }}')"
+              >
+                Rename
+              </button>
+            </div>
+          </div>
+
           <div class="management-section">
             <h4>Tags</h4>
             <div id="tags-list">
@@ -499,6 +520,29 @@
           .then(() => {
             alert("Tag added successfully!");
             location.reload();
+          })
+          .catch((error) => alert(error.message));
+      }
+
+      function renameIncident(incidentId) {
+        const input = document.getElementById("new-name-input");
+        const newName = input.value.trim();
+        if (!newName) {
+          alert("Incident name cannot be empty.");
+          return;
+        }
+        fetch(`/dashboard/api/incidents/${incidentId}/rename`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ name: newName }),
+        })
+          .then((response) => {
+            if (!response.ok) throw new Error("Failed to rename incident.");
+            return response.json();
+          })
+          .then((data) => {
+            alert("Incident renamed successfully!");
+            document.getElementById("incident-title").textContent = data.name;
           })
           .catch((error) => alert(error.message));
       }

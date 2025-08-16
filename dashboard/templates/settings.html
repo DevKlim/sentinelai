@@ -73,7 +73,8 @@
         background: #222222;
         color: #e0e0e0;
       }
-      .form-input:focus {
+      .form-input:focus,
+      .form-select:focus {
         outline: none;
         border-color: #ffc107;
       }
@@ -212,20 +213,91 @@
             <label for="idx-api-url" class="form-label">IDX Agent URL</label>
             <input type="text" id="idx-api-url" class="form-input" required />
           </div>
+
           <div class="form-group">
-            <label for="google-api-key" class="form-label"
-              >Google API Key</label
+            <label for="dashboard-llm-provider" class="form-label"
+              >LLM Provider (for Dashboard Features)</label
             >
-            <input type="password" id="google-api-key" class="form-input" />
+            <select id="dashboard-llm-provider" class="form-select">
+              <option value="google">Google (Recommended)</option>
+              <option value="openai">OpenAI</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="local">Local LLM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="dashboard-llm-model" class="form-label"
+              >LLM Model</label
+            >
+            <input
+              type="text"
+              id="dashboard-llm-model"
+              class="form-input"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label for="dashboard-llm-api-key" class="form-label"
+              >API Key</label
+            >
+            <input
+              type="password"
+              id="dashboard-llm-api-key"
+              class="form-input"
+            />
             <p class="form-help-text">
-              Required for bulk text processing and composite EIDOs. Leave
-              unchanged to keep existing key.
+              Required for features like bulk text processing. Leave unchanged
+              to keep the existing key.
             </p>
           </div>
+
           <button type="submit" class="btn btn-primary">
             Save Dashboard Settings
           </button>
           <div id="dashboard-response" class="response-message"></div>
+        </form>
+      </div>
+
+      <div class="settings-card">
+        <h2><i class="fas fa-robot"></i> Agent LLM Settings</h2>
+        <form id="agent-settings-form">
+          <div class="form-group">
+            <label for="agent-select" class="form-label">Configure Agent</label>
+            <select id="agent-select" class="form-select">
+              <option value="eido">EIDO Agent</option>
+              <option value="idx">IDX Agent</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="agent-llm-provider" class="form-label"
+              >LLM Provider</label
+            >
+            <select id="agent-llm-provider" class="form-select">
+              <option value="google">Google (Recommended)</option>
+              <option value="openai">OpenAI</option>
+              <option value="openrouter">OpenRouter</option>
+              <option value="local">Local LLM</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="agent-llm-model" class="form-label">LLM Model</label>
+            <input
+              type="text"
+              id="agent-llm-model"
+              class="form-input"
+              required
+            />
+            <p class="form-help-text">e.g., gpt-4o, google/gemini-pro, etc.</p>
+          </div>
+          <div class="form-group">
+            <label for="agent-llm-api-key" class="form-label">API Key</label>
+            <input type="password" id="agent-llm-api-key" class="form-input" />
+            <p class="form-help-text">Leave blank to keep existing key.</p>
+          </div>
+          <button type="submit" class="btn btn-primary">
+            Save Agent Settings
+          </button>
+          <div id="agent-response" class="response-message"></div>
         </form>
       </div>
 
@@ -252,9 +324,22 @@
     </div>
 
     <script>
+      function setupLlmForm(providerId, modelId) {
+        const providerSelect = document.getElementById(providerId);
+        const modelInput = document.getElementById(modelId);
+        providerSelect.addEventListener("change", () => {
+          if (providerSelect.value === "google") {
+            modelInput.value = "gemini-1.5-flash-latest";
+          }
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", function () {
         loadDashboardSettings();
         loadCategorizerStatus();
+
+        setupLlmForm("dashboard-llm-provider", "dashboard-llm-model");
+        setupLlmForm("agent-llm-provider", "agent-llm-model");
 
         document
           .getElementById("categorizer-toggle")
@@ -269,8 +354,11 @@
           const data = await response.json();
           document.getElementById("eido-api-url").value = data.EIDO_API_URL;
           document.getElementById("idx-api-url").value = data.IDX_API_URL;
-          document.getElementById("google-api-key").placeholder =
-            data.GOOGLE_API_KEY === "********"
+          document.getElementById("dashboard-llm-provider").value =
+            data.LLM_PROVIDER;
+          document.getElementById("dashboard-llm-model").value = data.LLM_MODEL;
+          document.getElementById("dashboard-llm-api-key").placeholder =
+            data.LLM_API_KEY === "********"
               ? "******** (Already Set)"
               : "Not Set";
         } catch (error) {
@@ -293,7 +381,6 @@
           if (!response.ok)
             throw new Error("Failed to fetch status from IDX agent");
           const data = await response.json();
-
           toggle.checked = data.enabled;
           const statusClass =
             data.status === "running" ? "status-running" : "status-stopped";
@@ -322,7 +409,7 @@
           loadCategorizerStatus();
         } catch (error) {
           displayMessage("idx-response", `Error: ${error.message}`, "error");
-          toggle.checked = !enable; // Revert toggle on error
+          toggle.checked = !enable;
         }
       }
 
@@ -330,11 +417,14 @@
         .getElementById("dashboard-settings-form")
         .addEventListener("submit", async (e) => {
           e.preventDefault();
-          const keyInput = document.getElementById("google-api-key");
+          const keyInput = document.getElementById("dashboard-llm-api-key");
           const settings = {
             EIDO_API_URL: document.getElementById("eido-api-url").value,
             IDX_API_URL: document.getElementById("idx-api-url").value,
-            GOOGLE_API_KEY: keyInput.value || "********",
+            LLM_PROVIDER: document.getElementById("dashboard-llm-provider")
+              .value,
+            LLM_MODEL: document.getElementById("dashboard-llm-model").value,
+            LLM_API_KEY: keyInput.value || "********",
           };
           try {
             const response = await fetch("/dashboard/api/settings/dashboard", {
@@ -351,6 +441,53 @@
           } catch (error) {
             displayMessage(
               "dashboard-response",
+              `Error: ${error.message}`,
+              "error"
+            );
+          }
+        });
+
+      document
+        .getElementById("agent-settings-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const agent = document.getElementById("agent-select").value;
+          const keyInput = document.getElementById("agent-llm-api-key");
+
+          const settings = {
+            LLM_PROVIDER: document.getElementById("agent-llm-provider").value,
+            // Different model names for different providers
+            GOOGLE_MODEL_NAME: document.getElementById("agent-llm-model").value,
+            OPENAI_MODEL_NAME: document.getElementById("agent-llm-model").value,
+            OPENROUTER_MODEL_NAME:
+              document.getElementById("agent-llm-model").value,
+            LOCAL_LLM_URL: document.getElementById("agent-llm-model").value,
+          };
+
+          const apiKey = keyInput.value;
+          if (apiKey) {
+            settings["GOOGLE_API_KEY"] = apiKey;
+            settings["OPENAI_API_KEY"] = apiKey;
+            settings["OPENROUTER_API_KEY"] = apiKey;
+          }
+
+          try {
+            const response = await fetch(
+              `/dashboard/api/settings/agent/${agent}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ settings: settings }),
+              }
+            );
+            const result = await response.json();
+            if (!response.ok)
+              throw new Error(result.detail || "Failed to save agent settings");
+            displayMessage("agent-response", result.message, "success");
+            keyInput.value = "";
+          } catch (error) {
+            displayMessage(
+              "agent-response",
               `Error: ${error.message}`,
               "error"
             );

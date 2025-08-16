@@ -2,7 +2,7 @@ import threading
 import asyncio
 import httpx
 import json
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from math import radians, sin, cos, sqrt, atan2
 from services.llm_service import get_llm_client
 from config.settings import settings
@@ -35,9 +35,9 @@ class IncidentCategorizer:
             print(f"LLM client not configured, categorizer will be inactive: {e}")
             self.llm_client = None
         self.check_interval = 15
-        self.time_window_hours = 6
-        self.distance_threshold_km = 10
-        self.similarity_threshold = 0.1
+        self.time_window_hours = 12  # Loosened from 6
+        self.distance_threshold_km = 15 # Loosened from 10
+        self.similarity_threshold = 0.05 # Loosened from 0.1
 
     async def fetch_uncategorized_eidos(self):
         """Fetches EIDOs marked as 'uncategorized'."""
@@ -62,41 +62,72 @@ class IncidentCategorizer:
             return []
 
     def find_potential_matches(self, new_eido, active_incidents):
-        """Finds potential matches based on time, location, and text similarity."""
+        """Finds potential matches based on time, location, tags, and text similarity."""
         potential_matches = []
         new_eido_loc = new_eido.get("location")
         new_eido_time_str = new_eido.get("timestamp")
         new_eido_desc = new_eido.get("description", "")
-        if not new_eido_loc or not isinstance(new_eido_loc, dict) or not new_eido_time_str: return []
-        new_lat, new_lon = new_eido_loc.get('latitude'), new_eido_loc.get('longitude')
-        if new_lat is None or new_lon is None: return []
+        new_eido_tags = set(new_eido.get('original_eido', {}).get('tags', []))
+
+        if not new_eido_time_str: return []
         try:
             new_time = datetime.fromisoformat(new_eido_time_str.replace('Z', '+00:00'))
         except (ValueError, TypeError): return []
+
         for incident in active_incidents:
-            is_match = False
+            # Time check
+            is_time_match = False
             try:
                 incident_time = datetime.fromisoformat(incident.get('created_at').replace('Z', '+00:00'))
-                if abs((new_time - incident_time).total_seconds()) > self.time_window_hours * 3600: continue
-            except (ValueError, TypeError, AttributeError): continue
-            for loc in incident.get("locations", []):
-                if isinstance(loc, list) and len(loc) == 2:
-                    if haversine(new_lat, new_lon, loc[0], loc[1]) <= self.distance_threshold_km:
-                        is_match = True; break
-            if not is_match: continue
-            incident_text = f"{incident.get('name', '')} {incident.get('summary', '')} {' '.join(incident.get('tags', []))}"
-            if text_similarity(new_eido_desc, incident_text) < self.similarity_threshold: continue
-            potential_matches.append(incident)
+                if abs((new_time - incident_time)) <= timedelta(hours=self.time_window_hours):
+                    is_time_match = True
+            except (ValueError, TypeError, AttributeError): pass
+
+            # Location check
+            is_location_match = False
+            if new_eido_loc and isinstance(new_eido_loc, dict):
+                new_lat, new_lon = new_eido_loc.get('latitude'), new_eido_loc.get('longitude')
+                if new_lat is not None and new_lon is not None:
+                    for loc in incident.get("locations", []):
+                        if isinstance(loc, list) and len(loc) == 2:
+                            if haversine(new_lat, new_lon, loc[0], loc[1]) <= self.distance_threshold_km:
+                                is_location_match = True; break
+            
+            # Tag check
+            incident_tags = set(incident.get('tags', []))
+            is_tag_match = bool(new_eido_tags.intersection(incident_tags))
+
+            # If there's any overlap in time, location, OR tags, consider it a potential match for the LLM.
+            if is_time_match or is_location_match or is_tag_match:
+                incident_text = f"{incident.get('name', '')} {incident.get('summary', '')}"
+                if text_similarity(new_eido_desc, incident_text) >= self.similarity_threshold:
+                    potential_matches.append(incident)
+        
         return potential_matches
 
     async def get_incident_match_from_llm(self, new_eido, candidate_incidents):
         """Asks LLM to classify EIDO against candidate incidents."""
         if not self.llm_client or not candidate_incidents: return None
-        prompt = f"""You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) belongs to an existing active incident.
-New EIDO Report: {json.dumps({"description": new_eido.get('description'), "timestamp": new_eido.get('timestamp'), "location": new_eido.get('location')})}
-Potentially Related Active Incidents: {json.dumps(candidate_incidents, indent=2, default=str)}
-Analyze the new EIDO against the candidates. Respond with a JSON object.
-If it's a MATCH, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_matching_incident", "reason": "Briefly explain the match."}}
+        
+        new_eido_context = {
+            "description": new_eido.get('description'),
+            "timestamp": new_eido.get('timestamp'),
+            "location": new_eido.get('location'),
+            "tags": new_eido.get('original_eido', {}).get('tags', [])
+        }
+        candidates_context = [{
+            "incident_id": inc.get("incident_id"),
+            "name": inc.get("name"),
+            "summary": inc.get("summary"),
+            "created_at": inc.get("created_at"),
+            "tags": inc.get("tags", [])
+        } for inc in candidate_incidents]
+
+        prompt = f"""You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) belongs to an existing active incident based on contextual relevance.
+New EIDO Report: {json.dumps(new_eido_context, indent=2, default=str)}
+Potentially Related Active Incidents: {json.dumps(candidates_context, indent=2, default=str)}
+Analyze the new EIDO against the candidates. Consider the time, location, tags, and description. Respond with a JSON object.
+If it's a MATCH, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_best_matching_incident", "reason": "Briefly explain why it matches."}}
 If it's a NEW incident, use this format: {{"decision": "NEW", "reason": "Briefly explain why it's a new incident.", "incident_details": {{"incident_name": "A concise, descriptive name for the new incident.", "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.", "summary": "A brief summary of the new incident.", "tags": ["relevant", "keywords"]}}}}
 Your JSON response:"""
         try:

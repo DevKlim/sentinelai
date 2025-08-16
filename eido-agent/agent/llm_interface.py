@@ -57,6 +57,11 @@ class LLMInterface:
         """Generates a JSON object by populating a template from raw text."""
         prompt = f"""
         Analyze the following incident description and extract structured information to populate the given JSON template.
+        Follow these instructions:
+        1.  Populate the provided JSON template with details extracted from the text.
+        2.  Based on the content, generate a concise, descriptive incident name (e.g., "Structure Fire at 123 Main St", "Two-Car Accident on I-5") and add it to a "suggestedIncidentName" key at the root of the JSON object.
+        3.  Based on the content, generate a list of 3-5 relevant keyword tags (e.g., "fire", "vehicle collision", "downtown", "injury") and add them to a "tags" key at the root of the JSON object.
+
         The JSON template is:
         ```json
         {json_template}
@@ -65,7 +70,7 @@ class LLMInterface:
         ---
         {text}
         ---
-        Your response MUST be a valid JSON object that strictly follows the structure of the provided template. 
+        Your response MUST be a single, valid JSON object that strictly follows the template structure with the addition of the "suggestedIncidentName" and "tags" keys at the root.
         Do not include any explanatory text, markdown formatting, or anything else outside of the JSON object itself.
         """
         response_text = self.generate_content(prompt)

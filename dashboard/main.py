@@ -9,11 +9,21 @@ import zipfile
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
 import random
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
-import google.generativeai as genai
 import traceback
+
+# Attempt to import LLM clients
+try:
+    import google.generativeai as genai
+except ImportError:
+    genai = None
+try:
+    from openai import OpenAI
+except ImportError:
+    OpenAI = None
+
 
 # Load environment variables from a .env file if it exists
 load_dotenv()
@@ -26,25 +36,68 @@ templates.env.filters['tojson'] = json.dumps
 config = {
     "EIDO_API_URL": os.environ.get("EIDO_API_URL", "http://python-services:8000"),
     "IDX_API_URL": os.environ.get("IDX_API_URL", "http://python-services:8001"),
-    "GOOGLE_API_KEY": os.environ.get("GOOGLE_API_KEY"),
+    "LLM_PROVIDER": os.environ.get("LLM_PROVIDER", "google"),
+    "LLM_MODEL": os.environ.get("LLM_MODEL", "gemini-1.5-flash-latest"),
+    "LLM_API_KEY": os.environ.get("LLM_API_KEY"),
 }
 llm_client = None
 
 def initialize_llm_client():
-    """Initializes the Google Generative AI client if an API key is available."""
+    """Initializes the LLM client based on the current configuration."""
     global llm_client
-    api_key = config.get("GOOGLE_API_KEY")
-    if api_key:
-        try:
-            genai.configure(api_key=api_key)
-            llm_client = genai.GenerativeModel('gemini-1.5-flash-latest')
-            print("Dashboard: Successfully initialized Google Generative AI client.")
-        except Exception as e:
-            llm_client = None
-            print(f"Dashboard: Failed to initialize Google Generative AI client: {e}")
-    else:
+    provider = config.get("LLM_PROVIDER", "google").lower()
+    api_key = config.get("LLM_API_KEY")
+    model_name = config.get("LLM_MODEL")
+
+    if not api_key:
         llm_client = None
-        print("Dashboard: GOOGLE_API_KEY not found. Bulk processing features will be disabled.")
+        print("Dashboard: LLM_API_KEY not found. LLM features will be disabled.")
+        return
+
+    try:
+        if provider == 'google':
+            if not genai:
+                raise ImportError("google-generativeai is not installed.")
+            genai.configure(api_key=api_key)
+            llm_client = genai.GenerativeModel(model_name)
+            print(f"Dashboard: Successfully initialized Google Generative AI client for model {model_name}.")
+        elif provider == 'openai' or provider == 'openrouter':
+            if not OpenAI:
+                raise ImportError("openai library is not installed.")
+            base_url = "https://openrouter.ai/api/v1" if provider == 'openrouter' else None
+            llm_client = OpenAI(api_key=api_key, base_url=base_url)
+            print(f"Dashboard: Successfully initialized {provider.title()} client.")
+        else:
+            llm_client = None
+            print(f"Dashboard: Unsupported LLM provider: {provider}")
+
+    except Exception as e:
+        llm_client = None
+        print(f"Dashboard: Failed to initialize LLM client for provider {provider}: {e}")
+
+async def generate_llm_content(prompt: str) -> str:
+    """A wrapper to generate content using the configured LLM client."""
+    if not llm_client:
+        raise HTTPException(status_code=503, detail="LLM client not configured. Please set up your API key in the Settings page.")
+
+    provider = config.get("LLM_PROVIDER", "").lower()
+    model_name = config.get("LLM_MODEL")
+
+    try:
+        if provider == 'google':
+            response = llm_client.generate_content(prompt)
+            return response.text
+        elif provider == 'openai' or provider == 'openrouter':
+            response = llm_client.chat.completions.create(
+                model=model_name,
+                messages=[{"role": "user", "content": prompt}],
+            )
+            return response.choices[0].message.content
+        else:
+            raise HTTPException(status_code=501, detail=f"LLM provider '{provider}' not supported by dashboard.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error during LLM processing: {str(e)}")
+
 
 @app.on_event("startup")
 async def startup_event():
@@ -58,7 +111,9 @@ class SettingsUpdate(BaseModel):
 class DashboardSettings(BaseModel):
     EIDO_API_URL: str
     IDX_API_URL: str
-    GOOGLE_API_KEY: Optional[str]
+    LLM_PROVIDER: str = Field(default="google")
+    LLM_MODEL: str = Field(default="gemini-1.5-flash-latest")
+    LLM_API_KEY: Optional[str] = None
 
 # --- Core Endpoints ---
 
@@ -117,8 +172,7 @@ async def submit_report(
                 except json.JSONDecodeError:
                     pass
             
-            if not llm_client:
-                raise HTTPException(status_code=503, detail="LLM client not configured. Cannot process raw text file.")
+            # Check for LLM client moved to the generate_llm_content function
             
             try:
                 raw_text = file_content.decode('utf-8')
@@ -134,8 +188,8 @@ Here is the text:
 Return a JSON object with a single key 'reports', which is a list of strings. Each string in the list should be a complete, distinct incident report. Do not include reports that are empty or just whitespace.
 """
             try:
-                response = llm_client.generate_content(prompt)
-                clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
+                llm_response_text = await generate_llm_content(prompt)
+                clean_response = llm_response_text.strip().replace("```json", "").replace("```", "").strip()
                 split_result = json.loads(clean_response)
                 
                 llm_reports = split_result.get("reports", [])
@@ -149,8 +203,6 @@ Return a JSON object with a single key 'reports', which is a list of strings. Ea
 
             except (json.JSONDecodeError, ValueError) as e:
                 raise HTTPException(status_code=500, detail=f"LLM returned malformed data. Error: {str(e)}")
-            except Exception as e:
-                raise HTTPException(status_code=500, detail=f"An error occurred during LLM processing: {str(e)}")
 
             if not incident_texts:
                 raise HTTPException(status_code=400, detail="LLM could not identify any valid, non-empty incident reports in the file.")
@@ -160,14 +212,10 @@ Return a JSON object with a single key 'reports', which is a list of strings. Ea
             for i, text in enumerate(incident_texts):
                 scenario_description = text
                 try:
-                    # If the report text is a JSON object (from a .jsonl file),
-                    # extract the 'Transcript' field for more precise processing.
                     report_data = json.loads(text)
                     if isinstance(report_data, dict) and 'Transcript' in report_data:
                         scenario_description = report_data['Transcript']
                 except json.JSONDecodeError:
-                    # It's not a JSON string, so it's likely a plain text report.
-                    # We'll use the text as is.
                     pass
 
                 gen_payload = {"template_name": template_name, "scenario_description": scenario_description}
@@ -183,7 +231,6 @@ Return a JSON object with a single key 'reports', which is a list of strings. Ea
 
     except httpx.HTTPStatusError as e:
         error_detail = e.response.text or f"Received status {e.response.status_code} with no error detail."
-        # Attempt to parse the detail as JSON to get the nested error
         try:
             nested_error = json.loads(error_detail)
             error_message = nested_error.get("detail", error_detail)
@@ -253,6 +300,28 @@ async def add_incident_tag(incident_id: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@app.post("/api/incidents/{incident_id}/rename")
+async def rename_incident_endpoint(incident_id: str, request: Request):
+    """Endpoint to handle renaming an incident."""
+    try:
+        body = await request.json()
+        new_name = body.get("name")
+        if not new_name or not new_name.strip():
+            raise HTTPException(status_code=400, detail="New name must not be empty.")
+        
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}/rename",
+                json={"name": new_name},
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 @app.get("/api/incidents/{incident_id}/download")
 async def download_incident_zip(incident_id: str):
     try:
@@ -287,62 +356,39 @@ async def download_incident_zip(incident_id: str):
 
 @app.get("/api/incidents/{incident_id}/composite-eido", response_class=JSONResponse)
 async def create_composite_eido(incident_id: str):
-    if not llm_client:
-        raise HTTPException(status_code=503, detail="LLM client not configured. Cannot create composite EIDO.")
-
+    # Check for LLM client moved to generate_llm_content
     try:
-        # 1. Fetch incident data from EIDO agent
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=30.0
             )
             response.raise_for_status()
             incident = response.json()
-
-        # 2. Extract all EIDOs
-        eidos_to_process = [
-            report.get("original_eido")
-            for report in incident.get("reports", [])
-            if report.get("original_eido")
-        ]
-
+        eidos_to_process = [report.get("original_eido") for report in incident.get("reports", []) if report.get("original_eido")]
         if not eidos_to_process:
             raise HTTPException(status_code=404, detail="No EIDO reports found for this incident to create a composite.")
-
-        # 3. Formulate the prompt
         eidos_history_str = json.dumps(eidos_to_process, indent=2)
-
         prompt = f"""
 You are an expert emergency services data analyst. You will be given a list of EIDO (Emergency Incident Data Object) JSONs that all pertain to the same incident, ordered from oldest to newest.
 Your task is to analyze all of them and create a single, comprehensive, composite EIDO that summarizes and consolidates the information.
-
 Follow these rules:
 1. Use the structure of the first EIDO as a template for the output JSON.
-2. Prioritize the most recent and specific information from the list of EIDOs. For example, if an early report says "vehicle involved" and a later one says "blue Toyota sedan", use the more specific information.
-3. Combine narratives from the 'notesComponent' of all EIDOs into a single, chronological summary in the composite EIDO's 'notesComponent'.
-4. Ensure the final 'incidentStatusCommonRegistryText' reflects the latest status of the incident.
-5. Consolidate all unique people, vehicles, and locations from all reports into the final EIDO.
-6. The final output MUST be a single, valid JSON object and nothing else. Do not include markdown formatting like ```json.
-
+2. Prioritize the most recent and specific information from the list of EIDOs.
+3. Combine narratives from the 'notesComponent' of all EIDOs into a single, chronological summary.
+4. The final output MUST be a single, valid JSON object and nothing else.
 Here is the full history of EIDOs for the incident:
 ---
 {eidos_history_str}
 ---
-
 Now, generate the single composite EIDO based on the provided history.
 """
-
-        # 4. Call the LLM
         try:
-            llm_response = llm_client.generate_content(prompt)
-            clean_response = llm_response.text.strip().replace("```json", "").replace("```", "").strip()
+            llm_response_text = await generate_llm_content(prompt)
+            clean_response = llm_response_text.strip().replace("```json", "").replace("```", "").strip()
             composite_eido = json.loads(clean_response)
         except (json.JSONDecodeError, ValueError) as e:
-            raise HTTPException(status_code=500, detail=f"LLM returned malformed JSON data. Error: {str(e)}\nRaw Response: {llm_response.text}")
-        except Exception as e:
-            raise HTTPException(status_code=500, detail=f"An error occurred during LLM processing: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"LLM returned malformed JSON data. Error: {str(e)}\nRaw Response: {llm_response_text}")
 
-        # 5. Return the composite EIDO
         return JSONResponse(content=composite_eido, status_code=200)
 
     except httpx.HTTPStatusError as e:
@@ -445,13 +491,15 @@ async def settings_page(request: Request):
 @app.get("/api/settings/dashboard", response_model=DashboardSettings)
 async def get_dashboard_settings():
     """Gets current dashboard-level settings."""
-    masked_key = config.get("GOOGLE_API_KEY")
+    masked_key = config.get("LLM_API_KEY")
     if masked_key:
         masked_key = "********"
     return {
         "EIDO_API_URL": config["EIDO_API_URL"],
         "IDX_API_URL": config["IDX_API_URL"],
-        "GOOGLE_API_KEY": masked_key
+        "LLM_PROVIDER": config.get("LLM_PROVIDER"),
+        "LLM_MODEL": config.get("LLM_MODEL"),
+        "LLM_API_KEY": masked_key
     }
 
 @app.post("/api/settings/dashboard", response_model=dict)
@@ -460,10 +508,13 @@ async def update_dashboard_settings(new_settings: DashboardSettings):
     global config
     config["EIDO_API_URL"] = new_settings.EIDO_API_URL
     config["IDX_API_URL"] = new_settings.IDX_API_URL
-    # Only update API key if it's not the masked value
-    if new_settings.GOOGLE_API_KEY and new_settings.GOOGLE_API_KEY != "********":
-        config["GOOGLE_API_KEY"] = new_settings.GOOGLE_API_KEY
-        initialize_llm_client() # Re-initialize with new key
+    config["LLM_PROVIDER"] = new_settings.LLM_PROVIDER
+    config["LLM_MODEL"] = new_settings.LLM_MODEL
+
+    if new_settings.LLM_API_KEY and new_settings.LLM_API_KEY != "********":
+        config["LLM_API_KEY"] = new_settings.LLM_API_KEY
+    
+    initialize_llm_client()
     return {"message": "Dashboard settings updated successfully."}
 
 @app.get("/api/settings/agent/{agent}")
