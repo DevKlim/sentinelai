@@ -41,7 +41,9 @@ COPY --from=dashboard-builder /app /app/dashboard
 COPY --from=python-services-builder /app /app
 
 # Copy nginx configuration
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm /etc/nginx/conf.d/default.conf
+# Copy nginx configuration
+COPY nginx.fly.conf /etc/nginx/nginx.conf
 
 # Copy run script
 COPY run-all.sh .

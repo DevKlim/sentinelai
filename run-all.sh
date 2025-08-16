@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 SERVICE=$1
 
@@ -10,13 +11,13 @@ if [ "$SERVICE" = "web" ]; then
   python3 -m uvicorn dashboard.main:app --host 0.0.0.0 --port 8080 &
 
   # Start the python-services
-  ./run-services.sh &
+  /app/run-services.sh &
 
   wait
 
 elif [ "$SERVICE" = "python-services" ]; then
   # Start the python-services
-  ./run-services.sh
+  /app/run-services.sh
 
 else
   echo "Unknown service: $SERVICE"

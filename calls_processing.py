@@ -63,15 +63,15 @@ def process_calls():
                     raise ValueError("EIDO generation failed, response did not contain 'generated_eido'.")
                 print(f"Generated EIDO for call {call.get('Call_ID', 'N/A')}")
 
-                # 2. Ingest EIDO and create an initial incident
+                # 2. Ingest EIDO to create an 'uncategorized' report
                 ingest_payload = {
                     "source": "calls_processing_script",
                     "original_eido": eido
                 }
                 response = requests.post(f"{EIDO_AGENT_URL}/api/v1/ingest", json=ingest_payload)
                 response.raise_for_status()
-                incident = response.json()
-                print(f"Ingested EIDO and created initial incident record: {incident.get('incident_id')}")
+                report = response.json()
+                print(f"Ingested EIDO report {report.get('id')} for call {call.get('Call_ID', 'N/A')}. Awaiting categorization.")
                 processed_calls.append(call)
 
             except requests.exceptions.RequestException as e:

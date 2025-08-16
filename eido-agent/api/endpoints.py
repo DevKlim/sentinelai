@@ -86,31 +86,36 @@ async def generate_eido_from_template(request: EidoGenerationRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to generate EIDO: {str(e)}")
 
-@router.post("/ingest", response_model=IncidentDetailPublic)
+@router.post("/ingest", response_model=EidoReportPublic)
 async def ingest_eido(request: IngestRequest, db: AsyncSession = Depends(get_db)):
     """
-    Ingests a raw EIDO JSON, creates a corresponding EIDO report,
-    and links it to a new incident.
+    Ingests a raw EIDO JSON, creates an 'uncategorized' EIDO report.
+    This report will be processed by the IDX agent for categorization.
     """
     try:
-        incident = await db_service.create_incident_from_eido(db, request.original_eido)
-        if not incident:
-            raise HTTPException(status_code=500, detail="Failed to create incident from EIDO.")
-
-        eido_report = await db_service.create_eido_report(
+        # Create the EIDO report without linking it to an incident.
+        # The db_service function will automatically set its status to 'uncategorized'.
+        report_db = await db_service.create_eido_report(
             db=db,
             eido_data=request.original_eido,
             source=request.source,
-            incident_id=incident.incident_id
+            incident_id=None
         )
-        if not eido_report:
-            raise HTTPException(status_code=500, detail="Failed to create and link EIDO report.")
+        if not report_db:
+            raise HTTPException(status_code=500, detail="Failed to create EIDO report record in the database.")
 
-        incident_details = await db_service.get_incident_details(db, incident.incident_id)
-        if not incident_details:
-             raise HTTPException(status_code=404, detail="Incident not found after creation.")
-        
-        return incident_details
+        # Manually construct the Pydantic response model.
+        # This avoids needing to add a new function to the database service layer for this single use case.
+        return EidoReportPublic(
+            id=report_db.eido_id,
+            timestamp=report_db.timestamp,
+            source=report_db.source,
+            description=report_db.description,
+            original_eido=report_db.original_eido,
+            location=report_db.location,
+            status=report_db.status,
+            incidents=[] # No incidents are linked at this stage.
+        )
     except Exception as e:
         print(f"Error during EIDO ingestion: {e}")
         raise HTTPException(status_code=500, detail=f"An internal error occurred during ingestion: {str(e)}")
