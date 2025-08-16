@@ -83,5 +83,24 @@ class LLMInterface:
             print(f"Raw LLM response was: {response_text}")
             return {"error": "Failed to generate valid JSON from text.", "raw_response": response_text}
 
+    async def fill_eido_template(self, template: dict, scenario_description: str) -> dict:
+        """
+        Asynchronously fills a template with information from a scenario.
+        This is the missing method that caused the error.
+        """
+        if not self.client:
+            raise Exception("LLM client is not initialized.")
+        
+        template_str = json.dumps(template, indent=2)
+        # In a production system, this synchronous, potentially long-running call
+        # should be run in a thread pool to avoid blocking the async event loop.
+        # For a minimal fix, a direct call is acceptable.
+        return self.generate_json_from_text(scenario_description, template_str)
+
+    def reload(self):
+        """Re-initializes the client. Useful when settings change."""
+        print("Reloading LLMInterface client...")
+        self.client = self._initialize_client()
+
 # Create a singleton instance of the LLMInterface to be imported by other modules
 llm_interface = LLMInterface()
