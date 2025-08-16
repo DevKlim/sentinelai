@@ -138,7 +138,7 @@ async def bulk_recategorize_eidos(db: AsyncSession, eido_ids: List[str], target_
     update_incident_stmt = (
         update(models.Incident)
         .where(models.Incident.incident_id == target_incident_id)
-        .values(updated_at=datetime.now(timezone.utc))
+        .values(updated_at=datetime.utcnow()) # FIXED: Use offset-naive UTC time to match DB schema
         .execution_options(synchronize_session=False)
     )
     await db.execute(update_incident_stmt)

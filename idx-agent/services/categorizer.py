@@ -123,12 +123,20 @@ class IncidentCategorizer:
             "tags": inc.get("tags", [])
         } for inc in candidate_incidents]
 
-        prompt = f"""You are an intelligent incident correlation agent. Your task is to determine if a new emergency report (EIDO) is an UPDATE to an existing active incident or an entirely NEW event. Analyze semantically: "Roadrunner Fire" could be the same as "wildland fire near Boulevard".
+        prompt = f"""You are an intelligent incident correlation agent. Your primary goal is to group related reports into a single incident. Your task is to determine if a new emergency report (EIDO) is an UPDATE to an existing active incident or an entirely NEW event. Be very lenient in matching. Err on the side of caution and MATCH reports if they are plausibly related.
+
+Analyze semantically: "Roadrunner Fire" is very likely the same event as a "wildland fire near Boulevard" if they are close in time and location. An update about "evacuations lifted" is definitely related to the original "evacuation orders issued" report.
+
 New EIDO Report: {json.dumps(new_eido_context, indent=2, default=str)}
+
 Potentially Related Active Incidents: {json.dumps(candidates_context, indent=2, default=str)}
-Analyze the new EIDO against the candidates. Consider the time, location, tags, and especially the semantic meaning of the descriptions. A report about evacuations being lifted for a fire is an update to the original fire report. Respond with a JSON object.
-If it's a MATCH to an existing incident, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_best_matching_incident", "reason": "Briefly explain why it is an update to the chosen incident."}}
-If it's a NEW incident, use this format: {{"decision": "NEW", "reason": "Briefly explain why this is a new event.", "incident_details": {{"incident_name": "A concise, descriptive headline for the new incident.", "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.", "summary": "A brief summary of the new incident.", "tags": ["relevant", "keywords"]}}}}
+
+Carefully analyze the new EIDO against the candidate incidents. Consider time (an update can be hours or days later), location (nearby locations can refer to the same event), tags, and especially the semantic meaning of the descriptions.
+
+Respond with a JSON object with your decision.
+- If it is a MATCH to an existing incident, use this format: {{"decision": "MATCH", "incident_id": "the_id_of_the_best_matching_incident", "reason": "Briefly explain why it is an update to the chosen incident."}}
+- Only if you are CERTAIN it is a completely separate and unrelated event, use this format for a NEW incident: {{"decision": "NEW", "reason": "Briefly explain why this is a new event.", "incident_details": {{"incident_name": "A concise, descriptive headline for the new incident.", "incident_type": "Categorize as 'Fire', 'Medical', 'Traffic', 'Crime', or 'Other'.", "summary": "A brief summary of the new incident.", "tags": ["relevant", "keywords"]}}}}
+
 Your JSON response:"""
         try:
             if self.llm_provider == 'google':
