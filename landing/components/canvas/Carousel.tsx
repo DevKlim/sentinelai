@@ -204,19 +204,11 @@ const Carousel = ({
   }, [selectedIndex, items.length]);
 
   const handleNext = useCallback(() => {
-    rotationCounterRef.current++;
-    const newIndex =
-      ((rotationCounterRef.current % items.length) + items.length) %
-      items.length;
-    setSelectedIndex(newIndex);
+    setSelectedIndex((prev) => (prev + 1) % items.length);
   }, [items.length, setSelectedIndex]);
 
   const handlePrev = useCallback(() => {
-    rotationCounterRef.current--;
-    const newIndex =
-      ((rotationCounterRef.current % items.length) + items.length) %
-      items.length;
-    setSelectedIndex(newIndex);
+    setSelectedIndex((prev) => (prev - 1 + items.length) % items.length);
   }, [items.length, setSelectedIndex]);
 
   useEffect(() => {

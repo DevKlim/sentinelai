@@ -1,6 +1,6 @@
 import os
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field
+from pydantic import Field, field_validator
 from typing import Optional
 
 class Settings(BaseSettings):
@@ -8,8 +8,7 @@ class Settings(BaseSettings):
     Pydantic settings class to manage environment variables for the EIDO agent.
     Values are automatically read from environment variables or a .env file.
     """
-    # --- The fix for the AttributeError ---
-    # Add the missing log_level attribute with a default value.
+    # This was added to fix a previous AttributeError
     log_level: str = Field(default="INFO", env="LOG_LEVEL")
 
     # API settings
@@ -20,16 +19,39 @@ class Settings(BaseSettings):
     # This is critical and must be set in the environment.
     database_url: str = Field(..., env="DATABASE_URL")
 
+    @field_validator('database_url')
+    @classmethod
+    def fix_database_url(cls, v: str) -> str:
+        """
+        Validates and corrects the database URL for SQLAlchemy async compatibility.
+        - Ensures the 'postgresql+asyncpg' driver is used.
+        - Strips all query parameters (like ?sslmode) so they can be handled
+          explicitly by the engine's connect_args.
+        """
+        if not v:
+            return v
+        
+        # Split the URL at the first '?' to remove all query parameters.
+        base_url = v.split("?")[0]
+
+        if base_url.startswith("postgres://"):
+            return base_url.replace("postgres://", "postgresql+asyncpg://", 1)
+        
+        if base_url.startswith("postgresql://") and "+asyncpg" not in base_url:
+            return base_url.replace("postgresql://", "postgresql+asyncpg://", 1)
+
+        return base_url
+
     # LLM Provider settings
     llm_provider: str = Field(default="google", env="LLM_PROVIDER")
     
     # Google Gemini settings
     google_api_key: Optional[str] = Field(default=None, env="GOOGLE_API_KEY")
-    google_model_name: str = Field(default="gemini-1.5-flash-latest", env="GOOGLE_MODEL_NAME")
+    google_model_name: str = Field(default="gemini-2.5-flash-lite", env="GOOGLE_MODEL_NAME")
 
     # OpenAI settings (optional)
     openai_api_key: Optional[str] = Field(default=None, env="OPENAI_API_KEY")
-    openai_model_name: str = Field(default="gpt-4o", env="OPENAI_MODEL_NAME")
+    openai_model_name: str = Field(default="gpt-5", env="OPENAI_MODEL_NAME")
 
     # Local LLM settings (optional)
     local_llm_url: Optional[str] = Field(default=None, env="LOCAL_LLM_URL")

@@ -1,5 +1,6 @@
-# sdsc-orchestrator/eido-agent/agent/llm_interface.py
-# sdsc-orchestrator/eido-agent/agent/llm_interface.py
+# file: sentinelai/eido-agent/agent/llm_interface.py
+#/ sentinelai/eido-agent/agent/llm_interface.py
+
 import json
 import google.generativeai as genai
 from openai import OpenAI

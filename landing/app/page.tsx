@@ -1,4 +1,5 @@
 "use client";
+{/* GEMINI-DEBUG: 2025-08-16T20:55:00Z */}
 import React, { useState } from "react";
 import { motion } from "framer-motion";
 import { Shield } from "lucide-react";

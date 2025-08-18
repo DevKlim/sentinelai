@@ -121,8 +121,7 @@ class TagRequest(BaseModel):
 
 # --- Schemas for Bulk Actions ---
 class EidoBulkActionRequest(BaseModel):
-    # <-- FIX: Updated to match the payload sent by the frontend JavaScript
-    action_type: str
+    action: str
     eido_ids: List[str]
     target_incident_id: Optional[str] = None
 

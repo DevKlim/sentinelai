@@ -29,7 +29,8 @@ except ImportError:
 load_dotenv()
 
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
+templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
+templates = Jinja2Templates(directory=templates_dir)
 templates.env.filters['tojson'] = json.dumps
 
 # --- In-memory Configuration Store ---

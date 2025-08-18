@@ -4,19 +4,26 @@ set -e
 SERVICE=$1
 
 if [ "$SERVICE" = "web" ]; then
-  # Start nginx to serve the landing page and proxy to other services
-  nginx -g 'daemon off;' &
-
-  # Start the dashboard service
-  python3 -m uvicorn dashboard.main:app --host 0.0.0.0 --port 8080 &
-
-  # Start the python-services
+  # Start the python-services in the background. They will be available on localhost.
+  echo "Starting Python services..."
   /app/run-services.sh &
 
-  wait
+  # Start the dashboard service, providing the correct internal URLs for the other APIs.
+  # These services are running in the same container, so they can communicate via localhost.
+  echo "Starting dashboard service..."
+  export EIDO_API_URL="http://localhost:8000"
+  export IDX_API_URL="http://localhost:8001"
+  # The dashboard's own API endpoints will use these variables to talk to the other services.
+  python3 -m uvicorn dashboard.main:app --host 0.0.0.0 --port 8080 &
+
+  # Start nginx in the foreground. It will serve the landing page and act as a reverse proxy
+  # for all the backend services.
+  echo "Starting NGINX..."
+  nginx -g 'daemon off;'
 
 elif [ "$SERVICE" = "python-services" ]; then
-  # Start the python-services
+  # This branch is for potential separate execution, not used by the 'web' process.
+  echo "Starting Python services directly..."
   /app/run-services.sh
 
 else

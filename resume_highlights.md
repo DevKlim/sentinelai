@@ -2,6 +2,15 @@
 
 This document outlines key accomplishments and skills demonstrated through the projects in this repository.
 
+## Potential Roles
+
+*   **AI/ML Engineer:** Focus on the design, development, and deployment of machine learning models, particularly in the areas of Natural Language Processing (NLP) and speech recognition.
+*   **Data Scientist:** Analyze complex datasets, extract meaningful insights, and build predictive models to solve business problems.
+*   **Software Engineer (AI/ML Focus):** Develop robust and scalable software systems that integrate and support AI/ML models.
+*   **DevOps Engineer:** Automate and streamline the development, deployment, and operations of software systems, with a focus on MLOps.
+*   **Full-Stack Developer:** Build and maintain both the front-end and back-end components of web applications, with a focus on data-driven applications.
+*   **Technical Lead/Architect:** Lead the design and development of complex software systems, providing technical guidance and mentorship to a team of engineers.
+
 ## Leadership & Mentorship
 
 *   **Guided Intern Team to Success:** Led and mentored a team of interns in the development of a critical component of the emergency response pipeline: a Whisper-based voice-to-text model for 911 calls. This involved providing technical guidance, project management, and fostering a collaborative learning environment. The successful completion of this project under my leadership demonstrates strong mentorship and team leadership skills.
@@ -13,6 +22,7 @@ This document outlines key accomplishments and skills demonstrated through the p
 *   **Duplicate Incident Detection:** Built a system to identify and respond to duplicate emergency incidents, optimizing resource allocation for emergency services.
 *   **Real-Time Alert System:** Developed a system for generating real-time alerts from incoming data streams, enabling faster response times.
 *   **EIDO Standardization:** Worked extensively with the Emergency Incident Data Object (EIDO) standard, developing tools for parsing and generating EIDO-compliant data.
+*   **RAG Implementation:** Implemented a Retrieval-Augmented Generation (RAG) system for contextualizing and enriching incident data.
 
 ## Software Engineering & DevOps
 
@@ -20,6 +30,7 @@ This document outlines key accomplishments and skills demonstrated through the p
 *   **Full-Stack Development:** Developed both front-end and back-end components of the system, including a web dashboard for monitoring and data visualization.
 *   **API Development:** Built and deployed numerous APIs for services within the ecosystem, facilitating communication and data exchange between components.
 *   **CI/CD and Automation:** Implemented automated scripts for building, testing, and deploying services, streamlining the development lifecycle.
+*   **Cloud Deployment:** Deployed services to the cloud using Fly.io, demonstrating experience with cloud platforms.
 
 ## Technical Deep Dive
 
@@ -48,7 +59,7 @@ This document outlines key accomplishments and skills demonstrated through the p
 
 ### Web Development
 
-*   **Frontend:** Developed interactive web interfaces using Streamlit, providing a user-friendly way to interact with the AI models and view data.
+*   **Frontend:** Developed interactive web interfaces using Streamlit and a Next.js landing page, providing a user-friendly way to interact with the AI models and view data.
 *   **Backend:** Built RESTful APIs using FastAPI to expose the functionality of the AI models and data services.
 *   **Real-Time Features:** Implemented real-time transcription with live microphone input and a demonstration mode for showcasing the system's capabilities.
 *   **UI/UX:** Designed a professional and intuitive web interface with multiple tabs for different functionalities, including file uploads, live recording, and model information.
@@ -80,7 +91,8 @@ This document outlines key accomplishments and skills demonstrated through the p
 *   **Streamlit:** A fast and easy way to build and share data apps.
 *   **Gradio:** Used to create simple web interfaces for machine learning models.
 *   **Matplotlib & Seaborn:** Core libraries for creating static, animated, and interactive visualizations.
-*   **PostCSS:** A tool for transforming CSS with JavaScript plugins.
+*   **Next.js & React:** A popular framework for building server-side rendered and static web applications.
+*   **Tailwind CSS & PostCSS:** A utility-first CSS framework and a tool for transforming CSS with JavaScript plugins.
 
 ### Audio Processing
 
