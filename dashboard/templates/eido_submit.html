@@ -320,6 +320,13 @@
           }
 
           showResult(JSON.stringify(result, null, 2));
+          // On success, clear the forms.
+          document.getElementById("text-form").reset();
+          document.getElementById("json-form").reset();
+          document.getElementById("file-name-text").textContent =
+            "Drag & drop any file here (it will be read as text), or click to select";
+          document.getElementById("file-name-json").textContent =
+            "Drag & drop a file here, or click to select";
         } catch (error) {
           showResult(JSON.stringify({ error: error.message }, null, 2));
         }

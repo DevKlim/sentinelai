@@ -1,0 +1,85 @@
+{
+  "comment": "A detailed EIDO for complex incidents. The LLM agent should populate all fields, including comments, based on the source text.",
+  "eidoVersion": "1.0",
+  "issuingElementIdentification": "eido-agent",
+  "incidentComponent": {
+    "comment": "Core details about the incident itself.",
+    "incidentTypeCommonRegistryText": "Unknown",
+    "incidentStatusCommonRegistryText": ["Reported"],
+    "incidentCommonPriorityNumber": 3,
+    "notesReference": [
+      { "$ref": "notes-what-summary" },
+      { "$ref": "notes-when-motive-status" }
+    ],
+    "locationReference": [{ "$ref": "location-where" }],
+    "personReference": [
+      { "$ref": "person-suspect-placeholder" },
+      { "$ref": "person-victim-placeholder" }
+    ],
+    "emergencyResourceReference": [],
+    "itemReference": []
+  },
+  "locationComponent": [
+    {
+      "$id": "location-where",
+      "comment": "The primary location of the incident.",
+      "locationTypeDescriptionRegistryText": "IncidentLocation",
+      "locationDescriptionText": "WHERE: A detailed text description of the location.",
+      "locationByValue": {
+        "latitude": null,
+        "longitude": null
+      }
+    }
+  ],
+  "personComponent": [
+    {
+      "$id": "person-suspect-placeholder",
+      "comment": "Placeholder for a suspect involved in the incident. Remove if none.",
+      "personIncidentRoleRegistryText": ["Suspect"],
+      "ncPersonComponent": {
+        "nc:PersonGivenName": "Unknown",
+        "nc:PersonSurName": "Unknown",
+        "nc:PersonAgeMeasure": { "nc:MeasurePointValue": null },
+        "nc:PersonPhysicalDescriptionText": "Details about the suspect's appearance, clothing, etc."
+      }
+    },
+    {
+      "$id": "person-victim-placeholder",
+      "comment": "Placeholder for a victim involved in the incident. Remove if none.",
+      "personIncidentRoleRegistryText": ["Victim"],
+      "ncPersonComponent": {
+        "nc:PersonGivenName": "Unknown",
+        "nc:PersonSurName": "Unknown",
+        "nc:PersonAgeMeasure": { "nc:MeasurePointValue": null },
+        "nc:PersonPhysicalDescriptionText": "Details about the victim, including injuries."
+      }
+    }
+  ],
+  "notesComponent": [
+    {
+      "$id": "notes-what-summary",
+      "comment": "A concise summary of the core event.",
+      "notesActionComments": "WHAT: A summary of the core event that occurred.",
+      "agentReference": { "$ref": "agent-EIDO-Agent-System" }
+    },
+    {
+      "$id": "notes-when-motive-status",
+      "comment": "Key temporal and contextual information about the incident.",
+      "notesActionComments": "WHEN/DATE: [Event Timestamp]. MOTIVE: [Motive, if known]. STATUS: [Current status of the incident/investigation].",
+      "agentReference": { "$ref": "agent-EIDO-Agent-System" }
+    }
+  ],
+  "agentComponent": [
+    {
+      "$id": "agent-EIDO-Agent-System",
+      "agentRoleRegistryText": ["System"]
+    }
+  ],
+  "agencyComponent": [
+    {
+      "$id": "agency-dispatch-placeholder",
+      "agencyRoleDescriptionRegistryText": ["Incident Owner"],
+      "incidentOwningAgencyIndicator": true
+    }
+  ]
+}

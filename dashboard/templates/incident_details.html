@@ -281,6 +281,55 @@
         gap: 1rem;
       }
 
+      .key-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+        margin-bottom: 1.5rem;
+      }
+      .stat-card {
+        background: #222222;
+        padding: 1rem;
+        border-radius: 8px;
+        border-left: 4px solid #ffc107;
+      }
+      .stat-card .label {
+        font-size: 0.9rem;
+        color: #aaaaaa;
+        margin-bottom: 0.25rem;
+        display: block;
+      }
+      .stat-card .value {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #ffffff;
+      }
+
+      .info-section {
+        margin-top: 1.5rem;
+      }
+      .info-section h4 {
+        font-size: 1.2rem;
+        font-weight: 500;
+        margin-bottom: 0.5rem;
+        border-bottom: 1px solid #444;
+        padding-bottom: 0.5rem;
+      }
+      .info-list {
+        list-style: none;
+        padding-left: 0;
+      }
+      .info-list li {
+        background: #222;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        margin-bottom: 0.5rem;
+        border-left: 3px solid #555;
+      }
+      .info-list li strong {
+        color: #ffc107;
+      }
+
       .fa-spin {
         animation: fa-spin 1s infinite linear;
       }
@@ -344,6 +393,29 @@
       <div class="incident-grid">
         <div class="main-column">
           <div class="incident-card">
+            <h2><i class="fas fa-sitemap"></i> Tactical Overview</h2>
+            <div class="key-info-grid" id="key-info-grid">
+              <!-- Dynamically populated by JS -->
+            </div>
+            <div id="info-suspects" class="info-section">
+              <h4>Suspects</h4>
+              <ul class="info-list"></ul>
+            </div>
+            <div id="info-victims" class="info-section">
+              <h4>Victims</h4>
+              <ul class="info-list"></ul>
+            </div>
+            <div id="info-witnesses" class="info-section">
+              <h4>Witnesses</h4>
+              <ul class="info-list"></ul>
+            </div>
+            <div id="info-units" class="info-section">
+              <h4>Deployed Units</h4>
+              <ul class="info-list"></ul>
+            </div>
+          </div>
+
+          <div class="incident-card">
             <h2><i class="fas fa-file-alt"></i> Incident Summary</h2>
             <div class="incident-summary">
               {{ incident.summary or "No summary available." }}
@@ -404,7 +476,6 @@
 
         <div class="incident-card">
           <h2><i class="fas fa-cogs"></i> Manage Incident</h2>
-
           <div class="management-section">
             <h4>Rename Incident</h4>
             <div class="add-tag-form">
@@ -423,7 +494,6 @@
               </button>
             </div>
           </div>
-
           <div class="management-section">
             <h4>Tags</h4>
             <div id="tags-list">
@@ -464,6 +534,9 @@
       </div>
     </div>
 
+    <script id="incident-data" type="application/json">
+      {{ incident | tojson | safe }}
+    </script>
     <script>
       function toggleJsonView(id) {
         const view = document.getElementById(`json-view-${id}`);
@@ -582,7 +655,6 @@
         const originalText = btn.innerHTML;
         btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
         btn.disabled = true;
-
         try {
           const response = await fetch(
             `/dashboard/api/incidents/${incidentId}/composite-eido`
@@ -593,7 +665,6 @@
               errorData.detail || `Server responded with ${response.status}`
             );
           }
-
           const compositeEido = await response.json();
           const blob = new Blob([JSON.stringify(compositeEido, null, 2)], {
             type: "application/json",
@@ -614,6 +685,156 @@
           btn.disabled = false;
         }
       }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        const incidentData = JSON.parse(
+          document.getElementById("incident-data").textContent
+        );
+
+        const suspects = new Map();
+        const victims = new Map();
+        const witnesses = new Map();
+        const units = new Map();
+
+        let tactical = {
+          when: "Not available",
+          motive: "Not available",
+          status: "Not available",
+          priority: "N/A",
+        };
+
+        function parseNote(noteText) {
+          const data = {};
+          const pairs = noteText.split(/\. |\n/);
+          pairs.forEach((pair) => {
+            const parts = pair.split(/:\s*/);
+            if (parts.length >= 2) {
+              const key = parts[0]
+                .trim()
+                .toLowerCase()
+                .replace(/\s*\/\s*/g, "/");
+              data[key] = parts.slice(1).join(": ").trim().replace(/\.$/, "");
+            }
+          });
+          return data;
+        }
+
+        const reports = incidentData.reports
+          ? [...incidentData.reports].reverse()
+          : [];
+
+        for (const report of reports) {
+          const eido = report.original_eido;
+          if (!eido) continue;
+
+          // Update tactical info from the latest reports first
+          if (
+            tactical.priority === "N/A" &&
+            eido.incidentComponent?.incidentCommonPriorityNumber
+          ) {
+            tactical.priority =
+              eido.incidentComponent.incidentCommonPriorityNumber;
+          }
+          if (eido.notesComponent) {
+            const note = eido.notesComponent.find(
+              (n) => n.$id === "notes-when-motive-status"
+            );
+            if (note?.notesActionComments) {
+              const parsed = parseNote(note.notesActionComments);
+              if (tactical.status === "Not available" && parsed.status)
+                tactical.status = parsed.status;
+              if (tactical.when === "Not available" && parsed["when/date"])
+                tactical.when = parsed["when/date"];
+              if (tactical.motive === "Not available" && parsed.motive)
+                tactical.motive = parsed.motive;
+            }
+          }
+
+          // Aggregate people and units across all reports
+          (eido.personComponent || []).forEach((p) => {
+            const role = p.personIncidentRoleRegistryText?.[0];
+            const details = p.ncPersonComponent || {};
+            const name =
+              `${details["nc:PersonGivenName"] || ""} ${
+                details["nc:PersonSurName"] || ""
+              }`.trim() || "Unnamed";
+            const age =
+              details["nc:PersonAgeMeasure"]?.["nc:MeasurePointValue"] || "N/A";
+            const desc =
+              details["nc:PersonPhysicalDescriptionText"] || "No description.";
+            const key = `${name}-${age}-${desc}`;
+            const personData = { name, age, description: desc };
+
+            if (role === "Suspect" && !suspects.has(key))
+              suspects.set(key, personData);
+            else if (role === "Victim" && !victims.has(key))
+              victims.set(key, personData);
+            else if (role === "Witness" && !witnesses.has(key))
+              witnesses.set(key, personData);
+          });
+
+          (eido.emergencyResourceComponent || []).forEach((u) => {
+            const name = u.emergencyResourceName || u.$id || "Unknown Unit";
+            if (!units.has(name)) {
+              units.set(name, {
+                name: name,
+                type:
+                  u.emergencyResourceTypeCommonRegistryText || "Unknown Type",
+                status: u.secondaryUnitStatusRegistryText?.[0] || "Unknown",
+              });
+            }
+          });
+        }
+
+        // --- Render UI ---
+        const grid = document.getElementById("key-info-grid");
+        grid.innerHTML = `
+          <div class="stat-card"><span class="label">Priority</span><span class="value">${tactical.priority}</span></div>
+          <div class="stat-card"><span class="label">Status</span><span class="value">${tactical.status}</span></div>
+          <div class="stat-card"><span class="label">When</span><span class="value">${tactical.when}</span></div>
+          <div class="stat-card"><span class="label">Motive</span><span class="value">${tactical.motive}</span></div>
+          <div class="stat-card"><span class="label">Victims</span><span class="value">${victims.size}</span></div>
+          <div class="stat-card"><span class="label">Suspects</span><span class="value">${suspects.size}</span></div>
+          <div class="stat-card"><span class="label">Units</span><span class="value">${units.size}</span></div>
+        `;
+
+        const renderList = (map, selector, emptyMsg) => {
+          const listEl = document.querySelector(selector);
+          if (map.size > 0) {
+            listEl.innerHTML = "";
+            map.forEach((item) => {
+              const li = document.createElement("li");
+              if (selector.includes("units")) {
+                // Unit format
+                li.innerHTML = `<strong>${item.name}</strong> (${item.type}): ${item.status}`;
+              } else {
+                // Person format
+                li.innerHTML = `<strong>${item.name} (Age: ${item.age})</strong>: ${item.description}`;
+              }
+              listEl.appendChild(li);
+            });
+          } else {
+            listEl.innerHTML = `<li>${emptyMsg}</li>`;
+          }
+        };
+
+        renderList(
+          suspects,
+          "#info-suspects .info-list",
+          "No suspects identified."
+        );
+        renderList(
+          victims,
+          "#info-victims .info-list",
+          "No victims identified."
+        );
+        renderList(
+          witnesses,
+          "#info-witnesses .info-list",
+          "No witnesses identified."
+        );
+        renderList(units, "#info-units .info-list", "No units recorded.");
+      });
     </script>
   </body>
 </html>

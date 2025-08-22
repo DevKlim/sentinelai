@@ -68,11 +68,10 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@eido_db:5432/${POSTGRES_DB:-eido_db}
-      - GOOGLE_API_KEY=${GOOGLE_API_KEY}
-      - GOOGLE_MODEL_NAME=${GOOGLE_MODEL_NAME:-gemini-2.5-flash-lite}
+      # EIDO_*, IDX_*, and other variables are now loaded exclusively from the .env file via `env_file: .env`
+      # This prevents conflicts and ensures agent-specific keys are used correctly.
       - EIDO_AGENT_URL=http://localhost:8000
       - IDX_AGENT_URL=http://localhost:8001
-      - GEOCODING_USER_AGENT=${GEOCODING_USER_AGENT:-sdsc-orchestrator-project}
     ports:
       - "8000:8000"
       - "8001:8001"

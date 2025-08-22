@@ -1,152 +1,94 @@
-from fastapi import APIRouter, HTTPException, Body, UploadFile, File
-from fastapi.openapi.utils import get_openapi
-import httpx
-import json
-from dotenv import set_key, get_key, find_dotenv
-import os
+from fastapi import APIRouter, HTTPException, Body
+from typing import Dict, Any
+from pydantic import BaseModel
 
-from models.schemas import Incident, CorrelationRequest, CorrelationResponse
 from config.settings import settings
+from services.llm_service import get_llm_service
+from services.categorizer import start_categorizer, stop_categorizer, get_categorizer_status
 
-router = APIRouter(prefix="/api/v1", tags=["Incidents", "EIDO", "Settings"])
-
-EIDO_AGENT_URL = settings.eido_agent_url
-
-# Store "claimed" incidents in memory for simplicity
-claimed_incidents = set()
+router = APIRouter(prefix="/api/v1", tags=["Settings", "Categorizer"])
 
 @router.get("/settings/env", response_model=dict)
 async def get_idx_env_settings():
-    """Gets current environment settings for the IDX agent."""
-    env_path = find_dotenv()
-    if not env_path:
-        return {"error": ".env file not found."}
-    
-    settings_keys = [
-        "LLM_PROVIDER", "GOOGLE_API_KEY", "OPENAI_API_KEY",
-        "GOOGLE_MODEL_NAME", "OPENAI_MODEL_NAME", "LOCAL_LLM_URL"
-    ]
-    
+    """Gets current environment settings for the IDX agent from the live config."""
+    settings_keys_map = {
+        "IDX_LLM_PROVIDER": "llm_provider",
+        "IDX_GOOGLE_API_KEY": "google_api_key",
+        "IDX_OPENAI_API_KEY": "openai_api_key",
+        "IDX_OPENROUTER_API_KEY": "openrouter_api_key",
+        "IDX_GOOGLE_MODEL_NAME": "google_model_name",
+        "IDX_OPENAI_MODEL_NAME": "openai_model_name",
+        "IDX_LOCAL_LLM_URL": "local_llm_url",
+    }
     current_settings = {}
-    for key in settings_keys:
-        value = get_key(env_path, key)
-        if "API_KEY" in key and value:
-            current_settings[key] = "********"
-        else:
-            current_settings[key] = value or ""
-            
+    for env_key, attr_name in settings_keys_map.items():
+        if hasattr(settings, attr_name):
+            value = getattr(settings, attr_name)
+            if "API_KEY" in env_key and value:
+                current_settings[env_key] = "********"
+            else:
+                current_settings[env_key] = value or ""
     return current_settings
 
 @router.post("/settings/env")
-async def update_env_settings(payload: dict):
+async def update_env_settings(payload: dict = Body(...)):
     """
-    Update the .env file with new settings and signal the categorizer to restart.
+    Update settings directly on the Pydantic settings object in memory and
+    re-initialize the LLM client to apply the changes immediately.
     """
-    try:
-        # <-- FIX: Handle nested payload from dashboard proxy
-        new_settings = payload.get("settings", payload)
-        if not isinstance(new_settings, dict):
-            raise HTTPException(status_code=400, detail="Invalid settings format.")
+    new_settings = payload.get("settings", payload)
+    if not isinstance(new_settings, dict):
+        raise HTTPException(status_code=400, detail="Invalid settings format.")
 
-        env_path = find_dotenv()
-        if not env_path:
-             raise HTTPException(status_code=500, detail=".env file not found.")
+    try:
+        # Map from the environment variable names sent by the dashboard
+        # to the attribute names in the Pydantic settings class.
+        key_map = {
+            "IDX_LLM_PROVIDER": "llm_provider",
+            "IDX_GOOGLE_API_KEY": "google_api_key",
+            "IDX_OPENAI_API_KEY": "openai_api_key",
+            "IDX_OPENROUTER_API_KEY": "openrouter_api_key",
+            "IDX_GOOGLE_MODEL_NAME": "google_model_name",
+            "IDX_OPENAI_MODEL_NAME": "openai_model_name",
+            "IDX_OPENROUTER_MODEL_NAME": "openai_model_name", # Map to a valid attribute
+            "IDX_LOCAL_LLM_URL": "local_llm_url",
+        }
 
         for key, value in new_settings.items():
-            if value == "********": continue
-            set_key(env_path, key, str(value))
+            if value is None or value == "********":
+                continue
+
+            attr_name = key_map.get(key.upper())
+            if attr_name and hasattr(settings, attr_name):
+                print(f"IDX Agent: Updating setting in memory: {attr_name}")
+                setattr(settings, attr_name, str(value))
+            else:
+                 print(f"IDX Agent Warning: Setting for key '{key}' not found or not mapped.")
         
-        with open("restart_categorizer.flag", "w") as f:
-            f.write("restart")
-        return {"message": "Settings updated successfully. Categorizer will restart."}
+        # Reload the LLM service to pick up new settings from the modified object
+        get_llm_service().reload()
+        
+        return {"message": "IDX Agent settings updated successfully. LLM client re-initialized."}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to update settings: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to update IDX Agent settings: {e}")
 
-@router.get("/openapi.json", include_in_schema=False)
-async def get_open_api_endpoint():
-    return get_openapi(title="IDX Agent API", version="1.0.0", routes=router.routes)
+@router.get("/settings/categorizer/status", response_model=Dict[str, Any])
+async def get_status():
+    """Gets the current status of the background categorizer task."""
+    return get_categorizer_status()
 
-@router.get("/incidents", response_model=list[Incident])
-async def get_incidents():
-    """
-    Get all incidents from the EIDO Agent.
-    """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(f"{EIDO_AGENT_URL}/api/v1/incidents")
-            response.raise_for_status()
-            return response.json()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Error connecting to EIDO Agent: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while fetching incidents: {e}")
+class ToggleRequest(BaseModel):
+    enable: bool
 
-
-@router.post("/incidents/{incident_id}/claim")
-async def claim_incident(incident_id: str):
-    """
-    Claim an incident for the IDX Agent.
-    """
-    claimed_incidents.add(incident_id)
-    return {"message": f"Incident {incident_id} claimed."}
-
-@router.get("/incidents/claimed", response_model=list[str])
-async def get_claimed_incidents():
-    """
-    Get all claimed incidents.
-    """
-    return list(claimed_incidents)
-
-@router.post("/eido/upload", response_model=dict)
-async def upload_eido(file: UploadFile = File(...)):
-    """
-    Upload an EIDO JSON file to the EIDO Agent.
-    """
-    if not file.filename.endswith(".json"):
-        raise HTTPException(status_code=400, detail="Invalid file type. Only .json files are accepted.")
-
-    content = await file.read()
-    try:
-        eido_data = json.loads(content)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=400, detail="Invalid JSON format in uploaded file.")
-
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f"{EIDO_AGENT_URL}/api/v1/ingest", json=eido_data)
-            response.raise_for_status()
-            return response.json()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Error connecting to EIDO Agent: {e}")
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=502, detail="Received an invalid response from the EIDO Agent.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred: {e}")
-
-
-from sentence_transformers import SentenceTransformer, util
-
-model = SentenceTransformer('all-MiniLM-L6-v2')
-
-incident_embeddings = {}
-
-@router.post("/incidents/{incident_id}/close")
-async def close_incident(incident_id: str):
-    """
-    Close an incident in the EIDO Agent.
-    """
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.post(f"{EIDO_AGENT_URL}/api/v1/incidents/{incident_id}/close")
-            response.raise_for_status()
-            return response.json()
-    except httpx.HTTPStatusError as e:
-        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
-    except httpx.RequestError as e:
-        raise HTTPException(status_code=502, detail=f"Error connecting to EIDO Agent: {e}")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An unexpected error occurred while closing the incident: {e}")
+@router.post("/settings/categorizer/toggle", response_model=Dict[str, str])
+async def toggle_categorizer_endpoint(request: ToggleRequest):
+    """Starts or stops the background categorizer task."""
+    if request.enable:
+        if not get_llm_service().is_configured():
+             raise HTTPException(status_code=400, detail="Cannot enable categorizer: LLM is not configured. Please set the API key first.")
+        success = start_categorizer()
+        message = "Categorizer started successfully." if success else "Categorizer is already running."
+    else:
+        success = stop_categorizer()
+        message = "Categorizer stopped successfully." if success else "Categorizer is not running."
+    return {"message": message}

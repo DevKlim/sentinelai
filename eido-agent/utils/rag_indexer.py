@@ -30,6 +30,10 @@ XML_CONTEXT_PATH = os.path.join(PROJECT_ROOT, 'eido_templates', 'EIDOContext.xml
 INDEX_DIR = os.path.join(PROJECT_ROOT, 'services')
 INDEX_FILE_PATH = os.path.join(INDEX_DIR, 'eido_schema_index.json')
 
+def _normalize_whitespace(text: str) -> str:
+    """Normalizes whitespace in a string, including replacing newlines with spaces."""
+    return ' '.join(text.replace('\n', ' ').strip().split())
+
 def create_xml_context_chunks(xml_path: str) -> List[Tuple[str, str]]:
     """Parses the EIDOContext.xml file and creates text chunks."""
     chunks = []
@@ -44,14 +48,14 @@ def create_xml_context_chunks(xml_path: str) -> List[Tuple[str, str]]:
         # Extract from Summary
         summary = root.find('Summary')
         if summary is not None and summary.text:
-            chunks.append(('EIDO Summary', f"Overall EIDO Summary: {' '.join(summary.text.strip().split())}"))
+            chunks.append(('EIDO Summary', f"Overall EIDO Summary: {_normalize_whitespace(summary.text)}"))
 
         # Extract from CoreConcepts
         for concept in root.findall('.//Concept'):
             name = concept.get('name')
-            desc_element = concept.find('Description') # Directly finding description within concept
+            desc_element = concept.find('Description')
             if name and desc_element is not None and desc_element.text:
-                desc_text = ' '.join(desc_element.text.strip().split())
+                desc_text = _normalize_whitespace(desc_element.text)
                 chunks.append((f'Concept: {name}', f"EIDO Concept '{name}': {desc_text}"))
 
         # Extract from NIEM_Integration
@@ -59,12 +63,12 @@ def create_xml_context_chunks(xml_path: str) -> List[Tuple[str, str]]:
         if niem_integration is not None:
             purpose = niem_integration.find('Purpose')
             if purpose is not None and purpose.text:
-                chunks.append(('NIEM Integration Purpose', f"Purpose of NIEM Integration: {' '.join(purpose.text.strip().split())}"))
+                chunks.append(('NIEM Integration Purpose', f"Purpose of NIEM Integration: {_normalize_whitespace(purpose.text)}"))
             
             for child in niem_integration:
                 if child.tag not in ['Purpose'] and child.text:
                     tag_name = child.tag.replace('_', ' ')
-                    text_content = ' '.join(child.itertext()).strip().replace('\n', ' ').replace('  ', ' ')
+                    text_content = _normalize_whitespace(' '.join(child.itertext()))
                     chunks.append((f'NIEM Integration: {tag_name}', f"{tag_name} for NIEM Integration: {text_content}"))
 
         # Extract from DataComponents
@@ -72,7 +76,7 @@ def create_xml_context_chunks(xml_path: str) -> List[Tuple[str, str]]:
             name = component.get('name')
             desc_element = component.find('Description')
             if name and desc_element is not None and desc_element.text:
-                text_parts = [f"Component Name: {name}", f"Description: {' '.join(desc_element.text.strip().split())}"]
+                text_parts = [f"Component Name: {name}", f"Description: {_normalize_whitespace(desc_element.text)}"]
                 
                 fields = component.findall('Fields/Field')
                 if fields:
@@ -81,7 +85,7 @@ def create_xml_context_chunks(xml_path: str) -> List[Tuple[str, str]]:
                         field_name = field.get('name')
                         field_desc_element = field.find('Description')
                         if field_name and field_desc_element is not None and field_desc_element.text:
-                             field_desc_text = ' '.join(field_desc_element.text.strip().split())
+                             field_desc_text = _normalize_whitespace(field_desc_element.text)
                              text_parts.append(f"  - {field_name}: {field_desc_text}")
                 chunks.append((f'Component Context: {name}', "\n".join(text_parts)))
 

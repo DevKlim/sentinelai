@@ -1,26 +1,32 @@
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
+from typing import Optional
 
 class Settings(BaseSettings):
     """
-    Pydantic settings class to manage environment variables.
-    By default, it automatically reads from environment variables.
+    Pydantic settings class to manage environment variables for the IDX agent.
     """
     api_host: str = "0.0.0.0"
     api_port: int = 8001
-    # <-- CORRECTED LINE: Default to localhost for intra-container communication
     eido_agent_url: str = "http://localhost:8000"
     
-    # LLM Provider: 'google', 'openai', or 'local'
-    llm_provider: str = Field(default='google', env='LLM_PROVIDER')
+    # LLM Provider settings with IDX_ prefix
+    llm_provider: str = Field(default='google', env='IDX_LLM_PROVIDER')
     
-    # API Keys - will be loaded from environment
-    google_api_key: str | None = Field(default=None, env='GOOGLE_API_KEY')
-    openai_api_key: str | None = Field(default=None, env='OPENAI_API_KEY')
+    google_api_key: Optional[str] = Field(default=None, env='IDX_GOOGLE_API_KEY')
+    google_model_name: str = Field(default='gemini-1.5-flash-latest', env='IDX_GOOGLE_MODEL_NAME')
     
-    # Model Names
-    google_model_name: str = Field(default='gemini-2.5-flash-lite', env='GOOGLE_MODEL_NAME')
-    openai_model_name: str = Field(default='gpt-4o', env='OPENAI_MODEL_NAME')
-    local_llm_url: str | None = Field(default=None, env='LOCAL_LLM_URL')
+    openai_api_key: Optional[str] = Field(default=None, env='IDX_OPENAI_API_KEY')
+    openai_model_name: str = Field(default='gpt-4o', env='IDX_OPENAI_MODEL_NAME')
+    
+    openrouter_api_key: Optional[str] = Field(default=None, env='IDX_OPENROUTER_API_KEY')
+    
+    local_llm_url: Optional[str] = Field(default=None, env='IDX_LOCAL_LLM_URL')
+
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra='ignore'
+    )
 
 settings = Settings()

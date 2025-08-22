@@ -51,9 +51,9 @@ def process_calls():
                     unprocessed_calls.append(call)
                     continue
 
-                # 1. Generate EIDO from raw text (transcript)
+                # 1. Generate EIDO from raw text (transcript) using the new detailed template
                 payload = {
-                    "template_name": "general_incident.json", 
+                    "template_name": "detailed_incident.json", 
                     "scenario_description": scenario_text
                 }
                 response = requests.post(f"{EIDO_AGENT_URL}/api/v1/generate_eido_from_template", json=payload)

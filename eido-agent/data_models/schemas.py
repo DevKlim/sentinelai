@@ -49,7 +49,7 @@ class EidoReportPublic(BaseModel):
     description: Optional[str] = None
     original_eido: Optional[Dict[str, Any]] = None
     location: Optional[Dict[str, Any]] = None
-    status: str  # <-- FIX: Added missing status field
+    status: str
     incidents: Optional[List[Dict[str, Any]]] = []
 
     class Config:
@@ -78,7 +78,7 @@ class IncidentPublic(BaseModel):
     status: str
     incident_type: Optional[str] = None
     summary: Optional[str] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None  # <-- MODIFIED: Made optional
     tags: List[str] = []
     locations: List[List[float]] = []
     report_count: int = 0
@@ -93,7 +93,7 @@ class IncidentDetailPublic(BaseModel):
     status: str
     incident_type: Optional[str] = None
     summary: Optional[str] = None
-    created_at: datetime
+    created_at: Optional[datetime] = None  # <-- MODIFIED: Made optional
     reports: List[EidoReportPublic] = []
     tags: List[str] = []
     locations: List[List[float]] = []
@@ -121,7 +121,7 @@ class TagRequest(BaseModel):
 
 # --- Schemas for Bulk Actions ---
 class EidoBulkActionRequest(BaseModel):
-    action: str
+    action_type: str # FIX: Renamed from 'action' to match database service usage
     eido_ids: List[str]
     target_incident_id: Optional[str] = None
 

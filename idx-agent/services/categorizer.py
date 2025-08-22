@@ -4,8 +4,13 @@ import httpx
 import json
 from datetime import datetime, timezone, timedelta
 from math import radians, sin, cos, sqrt, atan2
-from services.llm_service import get_llm_client
+from services.llm_service import get_llm_service
 from config.settings import settings
+
+# --- Global state for the categorizer thread ---
+categorizer_thread = None
+stop_event = threading.Event()
+# ---
 
 def haversine(lat1, lon1, lat2, lon2):
     """Calculate distance between two points on Earth."""
@@ -29,11 +34,7 @@ def text_similarity(text1, text2):
 class IncidentCategorizer:
     def __init__(self):
         self.eido_agent_url = settings.eido_agent_url
-        try:
-            self.llm_client, self.llm_provider = get_llm_client()
-        except ValueError as e:
-            print(f"LLM client not configured, categorizer will be inactive: {e}")
-            self.llm_client = None
+        self.llm_service = get_llm_service() # Get the singleton service
         self.check_interval = 15
         self.time_window_hours = 72  # Loosened to 3 days
         self.distance_threshold_km = 20 # Loosened from 10
@@ -107,8 +108,13 @@ class IncidentCategorizer:
 
     async def get_incident_match_from_llm(self, new_eido, candidate_incidents):
         """Asks LLM to classify EIDO against candidate incidents."""
-        if not self.llm_client or not candidate_incidents: return None
+        if not candidate_incidents: return None
         
+        llm_client = self.llm_service.get_client()
+        provider = self.llm_service.get_provider()
+
+        if not llm_client: return None # LLM not configured
+
         new_eido_context = {
             "description": new_eido.get('description'),
             "timestamp": new_eido.get('timestamp'),
@@ -139,11 +145,11 @@ Respond with a JSON object with your decision.
 
 Your JSON response:"""
         try:
-            if self.llm_provider == 'google':
-                response = self.llm_client.generate_content(prompt)
+            if provider == 'google':
+                response = llm_client.generate_content(prompt)
                 clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
             else: # Assuming OpenAI compatible
-                response = self.llm_client.chat.completions.create(
+                response = llm_client.chat.completions.create(
                     model=settings.openai_model_name,
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
@@ -156,7 +162,10 @@ Your JSON response:"""
 
     async def create_new_incident_details(self, eido: dict):
         """Uses LLM to generate details for a new incident from an EIDO."""
-        if not self.llm_client: return None
+        llm_client = self.llm_service.get_client()
+        provider = self.llm_service.get_provider()
+
+        if not llm_client: return None # LLM not configured
         
         eido_desc = eido.get('description', '')
         eido_tags = eido.get('original_eido', {}).get('tags', [])
@@ -168,11 +177,11 @@ Respond with a single JSON object with these exact keys: "incident_name" (make t
 Your JSON response:"""
 
         try:
-            if self.llm_provider == 'google':
-                response = self.llm_client.generate_content(prompt)
+            if provider == 'google':
+                response = llm_client.generate_content(prompt)
                 clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
             else: # OpenAI
-                response = self.llm_client.chat.completions.create(
+                response = llm_client.chat.completions.create(
                     model=settings.openai_model_name,
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
@@ -199,7 +208,14 @@ Your JSON response:"""
 
     async def _group_eidos_with_llm(self, eidos: list):
         """Uses LLM to group a batch of EIDOs by underlying incident."""
-        if not self.llm_client or not eidos: return [[e] for e in eidos]
+        if not eidos: return []
+        
+        llm_client = self.llm_service.get_client()
+        provider = self.llm_service.get_provider()
+
+        if not llm_client:
+            print("LLM client not available for grouping. Processing EIDOs individually.")
+            return [[e] for e in eidos]
         
         eido_summaries = {e['id']: e.get('description', 'No description') for e in eidos}
         prompt = f"""You are an AI assistant for emergency dispatch. I have a batch of new, uncategorized incident reports (EIDOs). Your task is to group together reports that are likely about the same underlying incident based on their descriptions.
@@ -207,11 +223,11 @@ Analyze the following reports: {json.dumps(eido_summaries, indent=2)}
 Respond with a JSON object containing a single key 'incident_groups', which is a list of lists. Each inner list should contain the string IDs of EIDOs that belong to the same incident. Each EIDO ID must appear in exactly one group.
 Example response: {{"incident_groups": [["id_1", "id_3"], ["id_2"], ["id_4"]]}}"""
         try:
-            if self.llm_provider == 'google':
-                response = self.llm_client.generate_content(prompt)
+            if provider == 'google':
+                response = llm_client.generate_content(prompt)
                 clean_response = response.text.strip().replace("```json", "").replace("```", "").strip()
             else: # OpenAI
-                response = self.llm_client.chat.completions.create(
+                response = llm_client.chat.completions.create(
                     model=settings.openai_model_name,
                     messages=[{"role": "user", "content": prompt}],
                     response_format={"type": "json_object"}
@@ -268,9 +284,16 @@ Example response: {{"incident_groups": [["id_1", "id_3"], ["id_2"], ["id_4"]]}}"
 
     async def run(self, stop_event: threading.Event):
         """Periodically checks for and categorizes uncategorized EIDOs."""
-        if not self.llm_client:
-            print("Categorizer is not running: LLM client not configured."); return
         while not stop_event.is_set():
+            if not self.llm_service.is_configured():
+                print("IDX Categorizer: Paused. LLM is not configured in settings.")
+                # Wait for the check interval, but check the stop event more frequently.
+                for _ in range(self.check_interval):
+                    if stop_event.is_set():
+                        break
+                    await asyncio.sleep(1)
+                continue # Continue to the next iteration of the while loop
+
             print("IDX Categorizer: Checking for uncategorized EIDOs...")
             eidos = await self.fetch_uncategorized_eidos()
             if not eidos:
@@ -292,7 +315,7 @@ Example response: {{"incident_groups": [["id_1", "id_3"], ["id_2"], ["id_4"]]}}"
                     break
                 await asyncio.sleep(1)
 
-def run_categorizer(stop_event: threading.Event):
+def run_categorizer_in_loop(stop_event: threading.Event):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
     categorizer = IncidentCategorizer()
@@ -300,3 +323,39 @@ def run_categorizer(stop_event: threading.Event):
         loop.run_until_complete(categorizer.run(stop_event=stop_event))
     finally:
         loop.close()
+
+def start_categorizer():
+    global categorizer_thread, stop_event
+    if categorizer_thread is None or not categorizer_thread.is_alive():
+        stop_event.clear()
+        categorizer_thread = threading.Thread(target=run_categorizer_in_loop, args=(stop_event,), daemon=True)
+        categorizer_thread.start()
+        print("Categorizer thread started.")
+        return True
+    return False
+
+def stop_categorizer():
+    global categorizer_thread
+    if categorizer_thread and categorizer_thread.is_alive():
+        stop_event.set()
+        categorizer_thread.join(timeout=5) # Give it some time to shut down
+        if categorizer_thread.is_alive():
+            print("Warning: Categorizer thread did not stop gracefully.")
+        else:
+            print("Categorizer thread stopped.")
+        categorizer_thread = None
+        return True
+    return False
+
+def get_categorizer_status():
+    is_running = categorizer_thread is not None and categorizer_thread.is_alive()
+    llm_configured = get_llm_service().is_configured()
+    status = "running" if is_running else "stopped"
+    if is_running and not llm_configured:
+        status = "paused (LLM not configured)"
+
+    return {
+        "enabled": is_running,
+        "status": status,
+        "llm_configured": llm_configured
+    }

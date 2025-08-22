@@ -273,7 +273,7 @@
               >LLM Provider</label
             >
             <select id="agent-llm-provider" class="form-select">
-              <option value="google">Google (Recommended)</option>
+              <option value="google">Google</option>
               <option value="openai">OpenAI</option>
               <option value="openrouter">OpenRouter</option>
               <option value="local">Local LLM</option>
@@ -287,7 +287,9 @@
               class="form-input"
               required
             />
-            <p class="form-help-text">e.g., gpt-4o, google/gemini-pro, etc.</p>
+            <p class="form-help-text">
+              gemini-2.5-flash-lite, gpt-4o, google/gemini-flash-2.5
+            </p>
           </div>
           <div class="form-group">
             <label for="agent-llm-api-key" class="form-label">API Key</label>
@@ -324,22 +326,14 @@
     </div>
 
     <script>
-      function setupLlmForm(providerId, modelId) {
-        const providerSelect = document.getElementById(providerId);
-        const modelInput = document.getElementById(modelId);
-        providerSelect.addEventListener("change", () => {
-          if (providerSelect.value === "google") {
-            modelInput.value = "gemini-1.5-flash-latest";
-          }
-        });
-      }
-
       document.addEventListener("DOMContentLoaded", function () {
         loadDashboardSettings();
         loadCategorizerStatus();
 
-        setupLlmForm("dashboard-llm-provider", "dashboard-llm-model");
-        setupLlmForm("agent-llm-provider", "agent-llm-model");
+        document
+          .getElementById("agent-select")
+          .addEventListener("change", loadAgentSettings);
+        loadAgentSettings(); // Initial load
 
         document
           .getElementById("categorizer-toggle")
@@ -371,6 +365,29 @@
         }
       }
 
+      async function loadAgentSettings() {
+        const agent = document.getElementById("agent-select").value;
+        try {
+          const response = await fetch(
+            `/dashboard/api/settings/agent/${agent}`
+          );
+          if (!response.ok)
+            throw new Error(`Failed to load settings for ${agent} agent.`);
+          const data = await response.json();
+
+          const prefix = agent === "eido" ? "EIDO_" : "IDX_";
+          document.getElementById("agent-llm-provider").value =
+            data[`${prefix}LLM_PROVIDER`] || "google";
+          document.getElementById("agent-llm-model").value =
+            data[`${prefix}GOOGLE_MODEL_NAME`] || "";
+          document.getElementById("agent-llm-api-key").placeholder =
+            "******** (Already Set)";
+        } catch (error) {
+          console.error(`Error loading ${agent} agent settings:`, error);
+          displayMessage("agent-response", `Error: ${error.message}`, "error");
+        }
+      }
+
       async function loadCategorizerStatus() {
         const toggle = document.getElementById("categorizer-toggle");
         const statusText = document.getElementById("categorizer-status-text");
@@ -382,9 +399,10 @@
             throw new Error("Failed to fetch status from IDX agent");
           const data = await response.json();
           toggle.checked = data.enabled;
-          const statusClass =
-            data.status === "running" ? "status-running" : "status-stopped";
-          statusText.innerHTML = `Enabled: <span class="${statusClass}">${data.enabled}</span>, Status: <span class="${statusClass}">${data.status}</span>`;
+          const statusClass = data.status.startsWith("run")
+            ? "status-running"
+            : "status-stopped";
+          statusText.innerHTML = `Status: <span class="${statusClass}">${data.status}</span>`;
         } catch (error) {
           statusText.innerHTML = `<span class="status-stopped">Error: ${error.message}</span>`;
         }
@@ -406,10 +424,11 @@
           if (!response.ok)
             throw new Error(result.detail || "Failed to toggle");
           displayMessage("idx-response", result.message, "success");
-          loadCategorizerStatus();
         } catch (error) {
           displayMessage("idx-response", `Error: ${error.message}`, "error");
-          toggle.checked = !enable;
+          toggle.checked = !enable; // Revert checkbox on error
+        } finally {
+          loadCategorizerStatus(); // Refresh status after action
         }
       }
 
@@ -453,22 +472,26 @@
           e.preventDefault();
           const agent = document.getElementById("agent-select").value;
           const keyInput = document.getElementById("agent-llm-api-key");
+          const prefix = agent === "eido" ? "EIDO_" : "IDX_";
 
           const settings = {
-            LLM_PROVIDER: document.getElementById("agent-llm-provider").value,
-            // Different model names for different providers
-            GOOGLE_MODEL_NAME: document.getElementById("agent-llm-model").value,
-            OPENAI_MODEL_NAME: document.getElementById("agent-llm-model").value,
-            OPENROUTER_MODEL_NAME:
+            [`${prefix}LLM_PROVIDER`]:
+              document.getElementById("agent-llm-provider").value,
+            [`${prefix}GOOGLE_MODEL_NAME`]:
               document.getElementById("agent-llm-model").value,
-            LOCAL_LLM_URL: document.getElementById("agent-llm-model").value,
+            [`${prefix}OPENAI_MODEL_NAME`]:
+              document.getElementById("agent-llm-model").value,
+            [`${prefix}OPENROUTER_MODEL_NAME`]:
+              document.getElementById("agent-llm-model").value,
+            [`${prefix}LOCAL_LLM_URL`]:
+              document.getElementById("agent-llm-model").value,
           };
 
           const apiKey = keyInput.value;
           if (apiKey) {
-            settings["GOOGLE_API_KEY"] = apiKey;
-            settings["OPENAI_API_KEY"] = apiKey;
-            settings["OPENROUTER_API_KEY"] = apiKey;
+            settings[`${prefix}GOOGLE_API_KEY`] = apiKey;
+            settings[`${prefix}OPENAI_API_KEY`] = apiKey;
+            settings[`${prefix}OPENROUTER_API_KEY`] = apiKey;
           }
 
           try {
@@ -485,6 +508,7 @@
               throw new Error(result.detail || "Failed to save agent settings");
             displayMessage("agent-response", result.message, "success");
             keyInput.value = "";
+            loadAgentSettings(); // Reload settings on success
           } catch (error) {
             displayMessage(
               "agent-response",

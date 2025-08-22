@@ -19,18 +19,25 @@ This document outlines key accomplishments and skills demonstrated through the p
 
 *   **Fine-tuned and Deployed LLMs for Geocoding:** Developed and deployed a fine-tuned Large Language Model for high-accuracy geocoding of incident data. This involved data processing, model fine-tuning, and deployment as a containerized service.
 *   **Real-Time 911 Call Transcription:** Architected and trained a voice-to-text model using Whisper for real-time transcription of 911 calls. This model is a core component of the emergency response pipeline.
+*   **Intelligent Incident Categorization:** Designed and built an AI-powered system for categorizing and correlating emergency incidents. This system uses a Large Language Model to analyze incoming incident reports and determine if they are new incidents or updates to existing ones, significantly improving the efficiency of emergency response.
 *   **Duplicate Incident Detection:** Built a system to identify and respond to duplicate emergency incidents, optimizing resource allocation for emergency services.
 *   **Real-Time Alert System:** Developed a system for generating real-time alerts from incoming data streams, enabling faster response times.
 *   **EIDO Standardization:** Worked extensively with the Emergency Incident Data Object (EIDO) standard, developing tools for parsing and generating EIDO-compliant data.
-*   **RAG Implementation:** Implemented a Retrieval-Augmented Generation (RAG) system for contextualizing and enriching incident data.
+*   **RAG Implementation:** Implemented a Retrieval-Augmented Generation (RAG) system for contextualizing and enriching incident data, improving the accuracy of generated EIDO reports.
 
 ## Software Engineering & DevOps
 
-*   **Microservices Orchestration:** Designed and orchestrated a complex system of microservices for a complete emergency response data pipeline. This involved using Docker for containerization and Nginx for routing.
-*   **Full-Stack Development:** Developed both front-end and back-end components of the system, including a web dashboard for monitoring and data visualization.
-*   **API Development:** Built and deployed numerous APIs for services within the ecosystem, facilitating communication and data exchange between components.
+*   **Multi-Agent System Architecture:** Designed and implemented a sophisticated multi-agent system for a complete emergency response data pipeline. This system consists of multiple, independent agents that communicate with each other through APIs.
+*   **Microservices Orchestration:** Orchestrated a complex system of microservices using Docker and Docker Compose. A central Nginx server acts as a reverse proxy and API gateway, routing traffic to the appropriate services.
+*   **Full-Stack Development:** Developed both front-end and back-end components of the system, including a web dashboard using Streamlit and a landing page using Next.js and React. The backend is powered by FastAPI and communicates with a PostgreSQL database.
+*   **API Development:** Built and deployed numerous RESTful APIs using FastAPI for services within the ecosystem, facilitating communication and data exchange between components.
 *   **CI/CD and Automation:** Implemented automated scripts for building, testing, and deploying services, streamlining the development lifecycle.
-*   **Cloud Deployment:** Deployed services to the cloud using Fly.io, demonstrating experience with cloud platforms.
+*   **Cloud Deployment & Management:** Deployed and managed services on Fly.io, including configuring environments, monitoring application health, and scaling resources.
+
+## Database Management
+
+*   **PostgreSQL Administration:** Managed a PostgreSQL database for storing incident data, including schema design, data modeling, and performance tuning.
+*   **Supabase Integration:** Utilized Supabase for database hosting, authentication, and real-time data synchronization, simplifying the development of data-intensive applications.
 
 ## Technical Deep Dive
 
@@ -48,7 +55,9 @@ This document outlines key accomplishments and skills demonstrated through the p
 
 *   **Microservices:** Designed and implemented a multi-container architecture using Docker and Docker Compose to orchestrate a suite of Python-based microservices.
 *   **Services:**
-    *   **`python-services`:** A container running multiple Python services, including a FastAPI-based API.
+    *   **`sentinelai`:** A central orchestrator and API gateway that routes requests to the appropriate agents.
+    *   **`eido-agent`:** An agent responsible for ingesting raw data, generating structured EIDO reports using a RAG pipeline, and managing EIDO templates.
+    *   **`idx-agent`:** An agent that intelligently categorizes and correlates incidents using an LLM, identifying duplicates and linking related events.
     *   **`eido_db`:** A PostgreSQL database for storing incident data.
     *   **`dashboard`:** A Streamlit-based web dashboard for data visualization and monitoring.
     *   **`landing`:** A modern, investor-ready landing page.
@@ -85,6 +94,7 @@ This document outlines key accomplishments and skills demonstrated through the p
 *   **Uvicorn:** An ASGI server for running FastAPI applications.
 *   **Pydantic:** Used for data validation and settings management.
 *   **PostgreSQL:** A powerful, open-source object-relational database system.
+*   **Supabase:** A backend-as-a-service platform for database hosting, authentication, and real-time data synchronization.
 
 ### Frontend & Data Visualization
 

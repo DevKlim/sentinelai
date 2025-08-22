@@ -1,3 +1,4 @@
+# sentinelai/eido-agent/Dockerfile
 # file: Dockerfile
 FROM python:3.11-slim-bullseye
 
@@ -17,6 +18,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
 
 # Run the RAG indexer during the build to pre-process schema data
+# This creates the eido_schema_index.json file inside the image.
 RUN python utils/rag_indexer.py
 
 # Copy the entrypoint script and ensure it has correct line endings and permissions

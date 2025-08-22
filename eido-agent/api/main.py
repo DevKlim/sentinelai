@@ -5,7 +5,6 @@ import logging
 
 from api.endpoints import router as api_router
 from config.settings import settings
-# Import the new initialization function
 from database.session import init_db, create_db_engine_and_session
 
 logger = logging.getLogger(__name__)
