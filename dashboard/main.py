@@ -529,6 +529,71 @@ Now, generate the single composite EIDO based on the provided history.
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An unexpected internal error occurred: {str(e)}")
 
+@app.post("/api/incidents/{incident_id}/predict_actions", response_class=JSONResponse)
+async def predict_next_actions(incident_id: str):
+    """
+    Analyzes an incident's history of EIDO reports and uses an LLM to predict
+    the next likely event and suggest actionable steps.
+    """
+    try:
+        # 1. Fetch incident history from EIDO agent
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=45.0
+            )
+            response.raise_for_status()
+            incident = response.json()
+
+        # 2. Prepare data for the LLM prompt
+        eidos_to_process = [report.get("original_eido") for report in incident.get("reports", []) if report.get("original_eido")]
+        if not eidos_to_process:
+            raise HTTPException(status_code=404, detail="No EIDO reports found for this incident to make a prediction.")
+
+        # Limit to the last 10 reports to keep the prompt size reasonable
+        eidos_history_str = json.dumps(eidos_to_process[-10:], indent=2)
+
+        # 3. Create a detailed prompt for the LLM
+        prompt = f"""
+You are an expert emergency response strategist and command officer. Your task is to analyze the history of an incident, provided as a sequence of EIDO (Emergency Incident Data Object) JSONs, and predict the next logical event or recommend the next course of action for dispatchers and field units.
+
+**Incident History (Sequence of EIDO JSONs, oldest to newest):**
+---
+{eidos_history_str}
+---
+
+**Analysis and Prediction Task:**
+Based on the incident's progression (e.g., initial report, units dispatched, on-scene reports), what is the most likely next significant event? Consider the incident type, severity, units already involved, and the information contained in the reports.
+
+**Required Output Format:**
+Your response MUST be a single, valid JSON object and nothing else. The JSON object must have the following structure:
+{{
+  "prediction_summary": "A concise, one-sentence summary of the predicted next event. Examples: 'A specialized HAZMAT unit will be dispatched to the scene,' or 'The incident commander will request additional law enforcement for crowd control.'",
+  "suggested_actions": [
+    "A concrete, actionable suggestion for the dispatcher. Example: 'Dispatch Engine 42 (HAZMAT) to the primary location.'",
+    "A second actionable suggestion for units on scene. Example: 'Advise all units to maintain a 300-foot perimeter and await HAZMAT arrival.'",
+    "A third actionable suggestion, which could be for command or other agencies. Example: 'Notify the county's environmental protection agency of a potential chemical spill.'"
+  ]
+}}
+"""
+        # 4. Call the LLM and parse the response
+        llm_response_text = await generate_llm_content(prompt)
+        clean_response = llm_response_text.strip().replace("```json", "").replace("```", "").strip()
+        prediction_data = json.loads(clean_response)
+
+        # 5. Return the structured prediction data
+        return JSONResponse(content=prediction_data, status_code=200)
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail=f"LLM returned malformed JSON. Error: {str(e)}. Raw response: {llm_response_text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An unexpected internal error occurred: {str(e)}")
+
+
 @app.get("/api/status")
 async def get_status():
     services = {
