@@ -14,12 +14,12 @@ class Settings(BaseSettings):
     api_host: str = Field(default="0.0.0.0", env="API_HOST")
     api_port: int = Field(default=8000, env="API_PORT")
 
-    # Database connection URL
-    database_url: str = Field(..., env="DATABASE_URL")
+    # Database connection URL - Made optional to allow build-time scripts to run
+    database_url: Optional[str] = Field(default=None, env="DATABASE_URL")
 
     @field_validator('database_url')
     @classmethod
-    def fix_database_url(cls, v: str) -> str:
+    def fix_database_url(cls, v: Optional[str]) -> Optional[str]:
         """Corrects database URL for SQLAlchemy asyncpg compatibility."""
         if not v:
             return v
@@ -43,7 +43,7 @@ class Settings(BaseSettings):
 
     local_llm_url: Optional[str] = Field(default=None, env="EIDO_LOCAL_LLM_URL")
 
-    geocoding_user_agent: str = Field(default="sdsc-orchestrator-project", env="GEOCODING_USER_AGENT")
+    geocoding_user_agent: str = Field(default="sentinelai-project", env="GEOCODING_USER_AGENT")
     embedding_model_name: str = Field(default="all-MiniLM-L6-v2", env="EMBEDDING_MODEL_NAME")
 
     # Incident matching settings (no prefix needed if shared)

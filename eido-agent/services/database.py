@@ -9,8 +9,8 @@ from data_models import models, schemas
 
 # --- Helper Functions ---
 
-def _extract_standard_info_from_eido(eido_data: Dict[str, Any]) -> Tuple[str, str, List[List[float]]]:
-    """Extracts only standard, non-generated information from an EIDO dictionary."""
+def _extract_core_info_from_eido(eido_data: Dict[str, Any]) -> Tuple[str, str, str, List[List[float]], List[str]]:
+    """Extracts core information from an EIDO dictionary for incident/report models."""
     incident_info = eido_data.get("incidentComponent", {})
     inc_type = incident_info.get("incidentTypeCommonRegistryText", "Unknown")
     
@@ -20,20 +20,20 @@ def _extract_standard_info_from_eido(eido_data: Dict[str, Any]) -> Tuple[str, st
     locations_coords = []
     location_component = eido_data.get("locationComponent", [])
     if location_component:
-        # Check inside the first item of the list
         loc_data = location_component[0] if isinstance(location_component, list) and len(location_component) > 0 else {}
         loc_val = loc_data.get("locationByValue")
         if isinstance(loc_val, dict) and "latitude" in loc_val and "longitude" in loc_val:
-            lat = loc_val.get("latitude")
-            lon = loc_val.get("longitude")
+            lat, lon = loc_val.get("latitude"), loc_val.get("longitude")
             if lat is not None and lon is not None:
                 try:
-                    # Ensure they are valid floats before appending
                     locations_coords.append([float(lat), float(lon)])
                 except (ValueError, TypeError):
-                    pass # Ignore if coordinates are not valid numbers
+                    pass
             
-    return inc_type, summary, locations_coords
+    name = eido_data.get("suggestedIncidentName", f"{inc_type} Incident").strip()
+    tags = eido_data.get("tags", [])
+
+    return name, inc_type, summary, locations_coords, tags
 
 
 async def _db_eido_to_public_pydantic(db: AsyncSession, eido_report: models.EidoReport) -> schemas.EidoReportPublic:
@@ -57,7 +57,7 @@ async def _db_eido_to_public_pydantic(db: AsyncSession, eido_report: models.Eido
 
 async def _db_incident_to_detailed_pydantic(db: AsyncSession, incident: models.Incident) -> schemas.IncidentDetailPublic:
     """Converts a DB Incident model to its detailed public Pydantic schema."""
-    query = select(models.EidoReport).where(models.EidoReport.incident_id_fk == incident.incident_id)
+    query = select(models.EidoReport).where(models.EidoReport.incident_id_fk == incident.incident_id).order_by(models.EidoReport.timestamp.desc())
     result = await db.execute(query)
     eido_reports = result.scalars().all()
     
@@ -80,7 +80,7 @@ async def _db_incident_to_detailed_pydantic(db: AsyncSession, incident: models.I
 
 async def create_eido_report(db: AsyncSession, eido_data: Dict[str, Any], source: str, incident_id: Optional[str] = None) -> models.EidoReport:
     """Creates and saves a new EIDO report."""
-    _, summary, locations = _extract_standard_info_from_eido(eido_data)
+    _, _, summary, locations, _ = _extract_core_info_from_eido(eido_data)
     location_json = {"latitude": locations[0][0], "longitude": locations[0][1]} if locations else None
 
     new_report = models.EidoReport(
@@ -96,6 +96,42 @@ async def create_eido_report(db: AsyncSession, eido_data: Dict[str, Any], source
     await db.commit()
     await db.refresh(new_report)
     return new_report
+
+async def get_latest_report_for_incident(db: AsyncSession, incident_id: str) -> Optional[models.EidoReport]:
+    """Retrieves the most recent EIDO report for a given incident."""
+    stmt = select(models.EidoReport).where(models.EidoReport.incident_id_fk == incident_id).order_by(models.EidoReport.timestamp.desc()).limit(1)
+    result = await db.execute(stmt)
+    return result.scalars().first()
+
+async def update_eido_report(db: AsyncSession, eido_id: str, new_eido_data: Dict[str, Any]) -> Optional[models.EidoReport]:
+    """Updates the content of an existing EIDO report and touches the parent incident."""
+    stmt = select(models.EidoReport).where(models.EidoReport.eido_id == eido_id)
+    result = await db.execute(stmt)
+    report = result.scalars().first()
+
+    if not report:
+        return None
+
+    # Update the EIDO report itself
+    report.original_eido = new_eido_data
+    
+    # Re-extract and update derived fields for consistency
+    _, _, summary, locations, _ = _extract_core_info_from_eido(new_eido_data)
+    report.description = summary
+    report.location = {"latitude": locations[0][0], "longitude": locations[0][1]} if locations else report.location
+
+    # Update the parent incident's timestamp
+    if report.incident_id_fk:
+        update_incident_stmt = (
+            update(models.Incident)
+            .where(models.Incident.incident_id == report.incident_id_fk)
+            .values(updated_at=datetime.now(timezone.utc))
+        )
+        await db.execute(update_incident_stmt)
+
+    await db.commit()
+    await db.refresh(report)
+    return report
 
 async def get_eidos_by_status(db: AsyncSession, status: Optional[str]) -> List[schemas.EidoReportPublic]:
     """Retrieves EIDO reports, optionally filtered by status."""
@@ -125,21 +161,17 @@ async def bulk_recategorize_eidos(db: AsyncSession, eido_ids: List[str], target_
     Links multiple EIDO reports to a single incident and updates their status.
     Also updates the target incident's `updated_at` timestamp.
     """
-    # Step 1: Update the EIDO reports
     update_eidos_stmt = (
         update(models.EidoReport)
         .where(models.EidoReport.eido_id.in_(eido_ids))
         .values(incident_id_fk=target_incident_id, status="linked")
-        .execution_options(synchronize_session=False)
     )
     result = await db.execute(update_eidos_stmt)
     
-    # Step 2: Update the timestamp of the target incident
     update_incident_stmt = (
         update(models.Incident)
         .where(models.Incident.incident_id == target_incident_id)
-        .values(updated_at=datetime.utcnow()) # FIXED: Use offset-naive UTC time to match DB schema
-        .execution_options(synchronize_session=False)
+        .values(updated_at=datetime.now(timezone.utc))
     )
     await db.execute(update_incident_stmt)
     
@@ -150,15 +182,7 @@ async def bulk_recategorize_eidos(db: AsyncSession, eido_ids: List[str], target_
 
 async def create_incident_from_eido(db: AsyncSession, eido_data: Dict[str, Any]) -> models.Incident:
     """Creates a new incident from EIDO data, prioritizing LLM-generated fields."""
-    # Extract standard fields and coordinates
-    inc_type, summary, locations_coords = _extract_standard_info_from_eido(eido_data)
-    
-    # Prioritize LLM-generated name, with a fallback
-    fallback_name = f"{inc_type} Incident" if inc_type != "Unknown" else "Unnamed Incident"
-    name = eido_data.get("suggestedIncidentName", fallback_name).strip()
-    
-    # Prioritize LLM-generated tags
-    tags = eido_data.get("tags", [])
+    name, inc_type, summary, locations_coords, tags = _extract_core_info_from_eido(eido_data)
     
     new_incident = models.Incident(
         incident_id=str(uuid.uuid4()),

@@ -12,156 +12,155 @@
       rel="stylesheet"
     />
     <style>
+      :root {
+        --bg-color: #0d0d0d;
+        --card-bg: #1a1a1a;
+        --border-color: #333;
+        --text-color: #e0e0e0;
+        --text-muted: #aaa;
+        --accent-color: #ffc107;
+        --accent-hover: #ffda6a;
+        --danger-color: #d9534f;
+        --success-color: #5cb85c;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
       body {
         font-family: "Inter", sans-serif;
-        background: #000;
-        color: #e0e0e0;
-        margin: 0;
+        background: var(--bg-color);
+        color: var(--text-color);
+        line-height: 1.6;
       }
       .container {
-        max-width: 95%;
-        margin: 1rem auto;
-        padding: 1rem;
+        max-width: 1600px;
+        margin: 2rem auto;
+        padding: 0 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+      .header {
+        text-align: center;
       }
       .header h1 {
         font-size: 2.5rem;
-        color: #ffc107;
-        text-align: center;
-        margin-bottom: 2rem;
+        color: var(--accent-color);
       }
-      .creator-grid {
+      .main-grid {
         display: grid;
-        grid-template-columns: 350px 2fr 350px;
-        gap: 1.5rem;
+        grid-template-columns: 300px 1fr 300px;
+        gap: 2rem;
         align-items: flex-start;
       }
       .card {
-        background: #1a1a1a;
-        border: 1px solid #333;
+        background: var(--card-bg);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
         padding: 1.5rem;
-        height: calc(100vh - 12rem);
         display: flex;
         flex-direction: column;
+        gap: 1.5rem;
       }
       .card h2 {
         font-size: 1.2rem;
-        margin-top: 0;
-        margin-bottom: 1rem;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid var(--border-color);
         padding-bottom: 0.75rem;
-        color: #ffc107;
+        margin-bottom: -0.5rem;
       }
       .form-group {
-        margin-bottom: 1rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
       }
       .form-label {
-        display: block;
         font-weight: 500;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
       }
+      .form-text {
+        font-size: 0.8rem;
+        color: var(--text-muted);
+      }
+      .form-select,
       .form-textarea,
-      .form-input,
-      .form-select {
+      .form-input {
         width: 100%;
         padding: 0.75rem;
         border: 1px solid #444;
-        border-radius: 6px;
-        font-size: 0.9rem;
+        border-radius: 8px;
+        font-size: 1rem;
         background: #222;
-        color: #e0e0e0;
-        box-sizing: border-box;
+        color: var(--text-color);
       }
       .form-textarea {
-        resize: vertical;
         min-height: 150px;
+        resize: vertical;
+        font-family: monospace;
       }
       .btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        border: 1px solid #ffc107;
+        padding: 0.75rem 1.5rem;
+        border: 1px solid var(--accent-color);
         border-radius: 8px;
-        font-size: 1rem;
         font-weight: 600;
         cursor: pointer;
         transition: all 0.3s ease;
-        background: #ffc107;
+        background: var(--accent-color);
         color: #000;
       }
+      .btn:hover:not(:disabled) {
+        background: var(--accent-hover);
+        border-color: var(--accent-hover);
+        transform: translateY(-2px);
+      }
       .btn:disabled {
-        background: #555;
-        border-color: #555;
-        color: #999;
+        opacity: 0.5;
         cursor: not-allowed;
       }
       .btn i {
         margin-right: 0.5rem;
       }
-      #editor-card {
-        padding: 0;
+      .btn-secondary {
+        background: #333;
+        border-color: #555;
+        color: var(--text-color);
       }
-      #result-json {
-        display: block;
-        width: 100%;
-        height: 100%;
-        background: #111;
-        color: #f0f0f0;
-        border: none;
-        border-radius: 12px;
-        padding: 1.5rem;
-        box-sizing: border-box;
-        font-family: monospace;
-        font-size: 0.9rem;
-        white-space: pre-wrap;
-        word-break: break-all;
-        outline: none;
+      .btn-secondary:hover:not(:disabled) {
+        background: #444;
       }
-      .scrollable-content {
-        overflow-y: auto;
-        flex-grow: 1;
-        padding-right: 5px; /* Add some padding to prevent scrollbar from overlapping content */
+      .btn-danger {
+        background: var(--danger-color);
+        border-color: var(--danger-color);
+        color: #fff;
       }
-      .scrollable-content ul {
+      .btn-danger:hover:not(:disabled) {
+        background: #c9302c;
+      }
+      .list {
         list-style: none;
-        padding: 0;
+        max-height: 400px;
+        overflow-y: auto;
+        padding-right: 10px;
       }
-      .template-item {
+      .list-item {
+        padding: 0.75rem;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.2s ease;
         display: flex;
         justify-content: space-between;
         align-items: center;
-        background: #222;
-        padding: 0.5rem 0.75rem;
-        border-radius: 4px;
-        margin-bottom: 0.5rem;
-        font-size: 0.9rem;
       }
-      .template-item-actions button {
-        background: none;
-        border: none;
-        color: #aaa;
-        cursor: pointer;
-        padding: 0.25rem 0.5rem;
-        font-size: 1rem;
-        transition: color 0.2s ease;
+      .list-item:hover {
+        background: #2a2a2a;
       }
-      .template-item-actions button:hover {
-        color: #ffc107;
-      }
-      .template-item-actions .delete-btn:hover {
-        color: #d9534f; /* A red color for delete */
-      }
-      #component-details {
-        background: #222;
-        padding: 0.75rem;
-        border-radius: 6px;
-        font-size: 0.8rem;
-        white-space: pre-wrap;
-        max-height: 200px;
-        overflow-y: auto;
+      .list-item.active {
+        background: var(--accent-color);
+        color: #000;
+        font-weight: 500;
       }
       .back-link {
         display: inline-flex;
@@ -169,141 +168,156 @@
         color: #e0e0e0;
         text-decoration: none;
         font-weight: 500;
-        margin-bottom: 1.5rem;
+        margin-bottom: -1rem;
         transition: all 0.3s ease;
-        padding: 0.5rem 1rem;
+        padding: 0.75rem 1.5rem;
         background: #1a1a1a;
         border: 1px solid #333;
         border-radius: 8px;
+        align-self: flex-start;
       }
       .back-link:hover {
-        border-color: #ffc107;
+        border-color: var(--accent-color);
+      }
+      .component-details pre {
+        background: #111;
+        padding: 1rem;
+        border-radius: 8px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 500px;
+        overflow-y: auto;
+      }
+      .fa-spin {
+        animation: spin 1s linear infinite;
+      }
+      @keyframes spin {
+        from {
+          transform: rotate(0deg);
+        }
+        to {
+          transform: rotate(360deg);
+        }
       }
       .toast {
         position: fixed;
         bottom: 20px;
         left: 50%;
         transform: translateX(-50%);
-        background-color: #333;
+        background: #222;
         color: #fff;
-        padding: 10px 20px;
+        padding: 1rem 2rem;
         border-radius: 8px;
-        opacity: 0;
-        visibility: hidden;
-        transition: opacity 0.3s ease, visibility 0.3s ease;
         z-index: 1000;
-        min-width: 250px;
-        text-align: center;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+        pointer-events: none;
       }
       .toast.show {
         opacity: 1;
-        visibility: visible;
       }
       .toast.success {
-        background-color: #28a745;
+        background: var(--success-color);
       }
       .toast.error {
-        background-color: #dc3545;
-      }
-      .toast.info {
-        background-color: #17a2b8;
-      }
-      .fa-spin {
-        animation: fa-spin 1s infinite linear;
-      }
-      @keyframes fa-spin {
-        0% {
-          transform: rotate(0deg);
-        }
-        100% {
-          transform: rotate(360deg);
-        }
+        background: var(--danger-color);
       }
     </style>
   </head>
   <body>
     <div class="container">
       <a href="/dashboard/" class="back-link"
-        ><i class="fas fa-arrow-left"></i> Dashboard</a
+        ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
       >
       <div class="header"><h1>EIDO Template Creator</h1></div>
-      <div class="creator-grid">
-        <!-- Left Column: Controls -->
+
+      <div class="main-grid">
+        <!-- Left Column: Schema Browser -->
         <div class="card">
-          <h2>Controls</h2>
-          <div class="scrollable-content">
-            <form id="creator-form">
-              <div class="form-group">
-                <label for="template-description" class="form-label"
-                  >1. Describe Template Requirements</label
-                >
-                <textarea
-                  id="template-description"
-                  class="form-textarea"
-                  placeholder="e.g., 'A template for a multi-vehicle accident with injuries. Include sections for at least two vehicles and three people (a victim, a suspect, and a witness).'"
-                ></textarea>
-              </div>
-              <button type="submit" id="generate-btn" class="btn">
-                <i class="fas fa-cogs"></i> Generate with AI
-              </button>
-            </form>
-            <hr style="border-color: #333; margin: 1.5rem 0" />
-            <div class="form-group">
-              <label for="component-selector" class="form-label"
-                >2. Browse & Add EIDO Components</label
-              >
-              <select id="component-selector" class="form-select">
-                <option value="">
-                  -- Select a component to view details --
-                </option>
-              </select>
-            </div>
-            <label class="form-label">Component Details (Reference)</label>
-            <pre id="component-details">
-Select a component from the dropdown above to see its schema details.</pre
-            >
+          <h2><i class="fas fa-book-open"></i> Schema Components</h2>
+          <ul class="list" id="schema-components-list">
+            <!-- Populated by JS -->
+          </ul>
+          <div class="component-details">
+            <pre
+              id="component-details-view"
+            ><code>Select a component to see its details.</code></pre>
           </div>
         </div>
 
         <!-- Middle Column: Editor -->
-        <div class="card" id="editor-card">
-          <pre><code id="result-json" contenteditable="true" spellcheck="false">{
-    "comment": "Your generated template will appear here. You can also edit it directly."
-}</code></pre>
+        <div class="card">
+          <form id="generate-form">
+            <h2><i class="fas fa-magic"></i> Generate New Template</h2>
+            <div class="form-group">
+              <label for="template-event-type" class="form-label"
+                >Base Template Type</label
+              >
+              <select id="template-event-type" class="form-select">
+                <option value="detailed_incident.json">
+                  Detailed Incident
+                </option>
+                <option value="general_incident.json">General Incident</option>
+                <option value="fire_incident.json">Fire Incident</option>
+              </select>
+              <p class="form-text">
+                Select a base template to guide the AI in generating the new
+                structure.
+              </p>
+            </div>
+            <div class="form-group">
+              <label for="template-description" class="form-label"
+                >Describe the Template</label
+              >
+              <textarea
+                id="template-description"
+                class="form-textarea"
+                placeholder="e.g., 'A template for a major traffic collision involving multiple vehicles and injuries, including fields for vehicle details and patient information.'"
+                style="min-height: 100px"
+              ></textarea>
+            </div>
+            <button type="submit" class="btn" id="generate-btn">
+              <i class="fas fa-cogs"></i> Generate with AI
+            </button>
+          </form>
+
+          <div>
+            <h2><i class="fas fa-edit"></i> Edit Template</h2>
+            <textarea
+              id="template-editor"
+              class="form-textarea"
+              placeholder="Generated or loaded template JSON will appear here..."
+              style="min-height: 400px"
+            ></textarea>
+          </div>
         </div>
 
-        <!-- Right Column: Management -->
+        <!-- Right Column: Save & Manage -->
         <div class="card">
-          <h2>Management</h2>
-          <div class="scrollable-content">
-            <form id="save-form">
-              <div class="form-group">
-                <label for="template-filename" class="form-label"
-                  >3. Save Template</label
-                >
-                <input
-                  type="text"
-                  id="template-filename"
-                  class="form-input"
-                  placeholder="e.g., mva_with_injuries.json"
-                  required
-                  pattern="^[a-zA-Z0-9_.-]+\.json$"
-                  title="Must be a valid filename ending in .json"
-                />
-              </div>
-              <button type="submit" id="save-btn" class="btn">
-                <i class="fas fa-save"></i> Save to EIDO Agent
-              </button>
-            </form>
-            <hr style="border-color: #333; margin: 1.5rem 0" />
+          <form id="save-form">
+            <h2><i class="fas fa-save"></i> Save Template</h2>
             <div class="form-group">
-              <label class="form-label">Existing Templates</label>
-              <div id="template-list">
-                <ul>
-                  <li>Loading...</li>
-                </ul>
-              </div>
+              <label for="template-filename" class="form-label">Filename</label>
+              <input
+                type="text"
+                id="template-filename"
+                class="form-input"
+                placeholder="e.g., traffic_collision.json"
+                pattern="[a-z0-9_]+\.json"
+                title="Use lowercase letters, numbers, and underscores, ending in .json"
+                required
+              />
             </div>
+            <button type="submit" class="btn" id="save-btn">
+              <i class="fas fa-save"></i> Save As New Template
+            </button>
+          </form>
+
+          <div>
+            <h2><i class="fas fa-list-ul"></i> Existing Templates</h2>
+            <ul class="list" id="existing-templates-list">
+              <!-- Populated by JS -->
+            </ul>
           </div>
         </div>
       </div>
@@ -311,276 +325,211 @@ Select a component from the dropdown above to see its schema details.</pre
     <div id="toast" class="toast"></div>
 
     <script>
-      // DOM Elements
-      const creatorForm = document.getElementById("creator-form");
-      const generateBtn = document.getElementById("generate-btn");
-      const resultJson = document.getElementById("result-json");
-      const saveForm = document.getElementById("save-form");
-      const templateList = document
-        .getElementById("template-list")
-        .querySelector("ul");
-      const componentSelector = document.getElementById("component-selector");
-      const componentDetails = document.getElementById("component-details");
-      const templateFilenameInput =
-        document.getElementById("template-filename");
-
-      let schemaIndexData = null;
-      const CORE_TEMPLATE = "detailed_incident.json"; // Define a core template that cannot be deleted
-
-      // --- State Management ---
-      let existingTemplateFilenames = []; // Store a list of current filenames
-
-      // Fetch initial data (templates and schema)
-      async function initializePage() {
-        try {
-          // Fetch templates and schema in parallel
-          const [templatesRes, schemaRes] = await Promise.all([
-            fetchTemplates(), // Now a separate function
-            fetch("/dashboard/api/eido/schema/index"),
-          ]);
-
-          if (!schemaRes.ok) throw new Error("Failed to load EIDO schema");
-          schemaIndexData = await schemaRes.json();
-          populateComponentSelector();
-        } catch (error) {
-          showToast(error.message, "error");
-          // templateList.innerHTML is handled by fetchTemplates now
-        }
-      }
-
-      // --- FETCH & RENDER LOGIC ---
-      async function fetchTemplates() {
-        try {
-          const response = await fetch("/dashboard/api/eido/templates");
-          if (!response.ok) throw new Error("Failed to load templates");
-          const templates = await response.json();
-
-          existingTemplateFilenames = templates; // Update our state
-
-          templateList.innerHTML =
-            templates
-              .map(
-                (filename) => `
-                    <li class="template-item">
-                        <span>${filename}</span>
-                        <div class="template-item-actions">
-                            <button class="load-btn" data-filename="${filename}" title="Load Template"><i class="fas fa-file-import"></i></button>
-                            ${
-                              filename !== CORE_TEMPLATE
-                                ? `<button class="delete-btn" data-filename="${filename}" title="Delete Template"><i class="fas fa-trash-alt"></i></button>`
-                                : `<button title="Cannot delete core template" disabled style="color: #444; cursor: not-allowed;"><i class="fas fa-trash-alt"></i></button>`
-                            }
-                        </div>
-                    </li>
-                `
-              )
-              .join("") || "<li>No templates found.</li>";
-        } catch (error) {
-          showToast(error.message, "error");
-          templateList.innerHTML = `<li>Error: ${error.message}</li>`;
-          throw error; // Re-throw to be caught by initializePage if needed
-        }
-      }
-
-      function populateComponentSelector() {
-        if (!schemaIndexData || !schemaIndexData.chunks) return;
-        // Sort component names alphabetically for better UX
-        const sortedChunks = [...schemaIndexData.chunks].sort((a, b) =>
-          a.name.localeCompare(b.name)
+      document.addEventListener("DOMContentLoaded", () => {
+        // --- Element Selectors ---
+        const generateForm = document.getElementById("generate-form");
+        const saveForm = document.getElementById("save-form");
+        const editor = document.getElementById("template-editor");
+        const schemaList = document.getElementById("schema-components-list");
+        const componentDetailsView = document.getElementById(
+          "component-details-view"
         );
-        sortedChunks.forEach((chunk) => {
-          const option = document.createElement("option");
-          option.value = chunk.name;
-          option.textContent = chunk.name;
-          componentSelector.appendChild(option);
-        });
-      }
-
-      componentSelector.addEventListener("change", () => {
-        if (!schemaIndexData) return;
-        const selectedName = componentSelector.value;
-        const chunk = schemaIndexData.chunks.find(
-          (c) => c.name === selectedName
+        const templatesList = document.getElementById(
+          "existing-templates-list"
         );
-        componentDetails.textContent = chunk
-          ? chunk.text
-          : "Select a component to view details.";
-      });
+        const filenameInput = document.getElementById("template-filename");
 
-      // --- EVENT HANDLING (DELEGATION) ---
-      templateList.addEventListener("click", (e) => {
-        const button = e.target.closest("button");
-        if (!button) return;
+        // --- Initial Data Loading ---
+        fetchSchemaIndex();
+        fetchExistingTemplates();
 
-        const filename = button.dataset.filename;
-        if (button.classList.contains("load-btn")) {
-          handleLoadTemplate(filename);
-        } else if (button.classList.contains("delete-btn")) {
-          handleDeleteTemplate(filename);
-        }
-      });
+        // --- Event Listeners ---
+        generateForm.addEventListener("submit", handleGenerate);
+        saveForm.addEventListener("submit", handleSave);
 
-      async function handleLoadTemplate(filename) {
-        try {
-          const response = await fetch(
-            `/dashboard/api/eido/templates/${filename}`
-          );
-          if (!response.ok) {
-            const err = await response.json();
-            throw new Error(err.detail || "Failed to load template");
+        // --- Functions ---
+        async function fetchSchemaIndex() {
+          try {
+            const response = await fetch("/dashboard/api/eido/schema/index");
+            if (!response.ok) throw new Error("Failed to load schema index.");
+            const index = await response.json();
+            schemaList.innerHTML = ""; // Clear existing
+            index.chunks.forEach((chunk) => {
+              const li = document.createElement("li");
+              li.className = "list-item";
+              li.textContent = chunk.name;
+              li.dataset.text = chunk.text;
+              li.addEventListener("click", () => {
+                document
+                  .querySelectorAll("#schema-components-list .list-item")
+                  .forEach((el) => el.classList.remove("active"));
+                li.classList.add("active");
+                componentDetailsView.textContent = chunk.text;
+              });
+              schemaList.appendChild(li);
+            });
+          } catch (error) {
+            schemaList.innerHTML = `<li class="list-item" style="color:var(--danger-color);">${error.message}</li>`;
           }
-          const content = await response.json();
-          resultJson.textContent = JSON.stringify(content, null, 2);
-          templateFilenameInput.value = filename; // Set filename in input field
-          showToast(`Loaded '${filename}' into editor.`, "success");
-        } catch (error) {
-          showToast(error.message, "error");
-        }
-      }
-
-      async function handleDeleteTemplate(filename) {
-        if (
-          !confirm(`Are you sure you want to permanently delete '${filename}'?`)
-        ) {
-          return;
         }
 
-        try {
-          const response = await fetch(
-            `/dashboard/api/eido/templates/${filename}`,
-            {
-              method: "DELETE",
-            }
-          );
+        async function fetchExistingTemplates() {
+          try {
+            const response = await fetch("/dashboard/api/eido/templates");
+            if (!response.ok)
+              throw new Error("Failed to load existing templates.");
+            const templates = await response.json();
+            templatesList.innerHTML = "";
+            templates.forEach((templateName) => {
+              const li = document.createElement("li");
+              li.className = "list-item";
+              const nameSpan = document.createElement("span");
+              nameSpan.textContent = templateName;
+              li.appendChild(nameSpan);
 
-          if (response.status === 204) {
-            showToast(`'${filename}' deleted successfully.`, "success");
-            fetchTemplates(); // Refresh the list
-          } else {
-            const err = await response.json();
-            throw new Error(
-              err.detail ||
-                `Failed to delete template (Status: ${response.status})`
+              const actionsDiv = document.createElement("div");
+              const loadBtn = document.createElement("button");
+              loadBtn.innerHTML = '<i class="fas fa-download"></i>';
+              loadBtn.className = "btn-secondary";
+              loadBtn.style.padding = "0.25rem 0.5rem";
+              loadBtn.onclick = () => loadTemplate(templateName);
+
+              const deleteBtn = document.createElement("button");
+              deleteBtn.innerHTML = '<i class="fas fa-trash"></i>';
+              deleteBtn.className = "btn-danger";
+              deleteBtn.style.padding = "0.25rem 0.5rem";
+              deleteBtn.style.marginLeft = "0.5rem";
+              deleteBtn.onclick = () => deleteTemplate(templateName);
+
+              actionsDiv.appendChild(loadBtn);
+              actionsDiv.appendChild(deleteBtn);
+              li.appendChild(actionsDiv);
+              templatesList.appendChild(li);
+            });
+          } catch (error) {
+            templatesList.innerHTML = `<li class="list-item" style="color:var(--danger-color);">${error.message}</li>`;
+          }
+        }
+
+        async function handleGenerate(e) {
+          e.preventDefault();
+          const btn = document.getElementById("generate-btn");
+          const originalHtml = btn.innerHTML;
+          btn.innerHTML =
+            '<i class="fas fa-spinner fa-spin"></i> Generating...';
+          btn.disabled = true;
+
+          const eventType = document.getElementById(
+            "template-event-type"
+          ).value;
+          const description = document.getElementById(
+            "template-description"
+          ).value;
+
+          try {
+            const response = await fetch(
+              "/dashboard/api/eido/templates/generate",
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  event_type: eventType,
+                  description: description,
+                }),
+              }
             );
+            const result = await response.json();
+            if (!response.ok)
+              throw new Error(result.detail || "Generation failed.");
+
+            editor.value = JSON.stringify(result.generated_template, null, 2);
+            showToast("Template generated successfully!", "success");
+          } catch (error) {
+            showToast(error.message, "error");
+            editor.value = `Error: ${error.message}`;
+          } finally {
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
           }
-        } catch (error) {
-          showToast(error.message, "error");
         }
-      }
 
-      // Form submission handlers
-      creatorForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const description = document
-          .getElementById("template-description")
-          .value.trim();
-        if (!description)
-          return showToast("Please enter a description.", "error");
+        async function handleSave(e) {
+          e.preventDefault();
+          const filename = filenameInput.value;
+          let content;
+          try {
+            content = JSON.parse(editor.value);
+          } catch {
+            showToast("Editor contains invalid JSON.", "error");
+            return;
+          }
 
-        generateBtn.disabled = true;
-        generateBtn.innerHTML =
-          '<i class="fas fa-spinner fa-spin"></i> Generating...';
-        resultJson.textContent =
-          '{"status": "Generating template, please wait..."}';
+          if (!confirm(`Are you sure you want to save as '${filename}'?`))
+            return;
 
-        try {
-          const response = await fetch(
-            "/dashboard/api/eido/templates/generate",
-            {
+          try {
+            const response = await fetch("/dashboard/api/eido/templates/save", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ description }),
-            }
-          );
-          const result = await response.json();
-          if (!response.ok)
-            throw new Error(result.detail || "Failed to generate template.");
-
-          resultJson.textContent = JSON.stringify(
-            result.generated_template,
-            null,
-            2
-          );
-          showToast("Template generated successfully!", "success");
-        } catch (error) {
-          resultJson.textContent = JSON.stringify(
-            { error: error.message },
-            null,
-            2
-          );
-          showToast(error.message, "error");
-        } finally {
-          generateBtn.disabled = false;
-          generateBtn.innerHTML =
-            '<i class="fas fa-cogs"></i> Generate with AI';
-        }
-      });
-
-      saveForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const filename = templateFilenameInput.value.trim();
-        let content;
-
-        // 1. Validate JSON content
-        try {
-          content = JSON.parse(resultJson.textContent);
-        } catch (jsonError) {
-          return showToast(
-            "The content in the editor is not valid JSON.",
-            "error"
-          );
-        }
-
-        if (!filename) return showToast("Filename is required.", "error");
-
-        // 2. Business Rule: Prevent overwriting the protected template
-        if (filename === CORE_TEMPLATE) {
-          return showToast(
-            `Cannot overwrite '${CORE_TEMPLATE}'. Please rename the file to save your changes.`,
-            "error"
-          );
-        }
-
-        // 3. Business Rule: Confirm overwrite for any other existing file
-        if (existingTemplateFilenames.includes(filename)) {
-          if (
-            !confirm(
-              `A template named '${filename}' already exists. Do you want to overwrite it?`
-            )
-          ) {
-            return; // Stop if the user cancels
+              body: JSON.stringify({ filename, content }),
+            });
+            const result = await response.json();
+            if (!response.ok)
+              throw new Error(result.detail || "Failed to save.");
+            showToast(result.message, "success");
+            fetchExistingTemplates(); // Refresh list
+            saveForm.reset();
+          } catch (error) {
+            showToast(error.message, "error");
           }
         }
 
-        // 4. Proceed with API call
-        try {
-          const response = await fetch("/dashboard/api/eido/templates/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ filename, content }),
-          });
-          const result = await response.json();
-          if (!response.ok) throw new Error(result.detail || "Failed to save.");
+        async function loadTemplate(filename) {
+          try {
+            const response = await fetch(
+              `/dashboard/api/eido/templates/${filename}`
+            );
+            if (!response.ok) throw new Error("Failed to load template.");
+            const data = await response.json();
+            editor.value = JSON.stringify(data, null, 2);
+            filenameInput.value = filename;
+            showToast(`Loaded '${filename}' into editor.`, "success");
+          } catch (error) {
+            showToast(error.message, "error");
+          }
+        }
 
-          showToast(result.message, "success");
-          fetchTemplates(); // Refresh the list of templates
-          // Do not reset the form, user might want to continue editing
-        } catch (error) {
-          showToast(error.message, "error");
+        async function deleteTemplate(filename) {
+          if (
+            !confirm(`Permanently delete '${filename}'? This cannot be undone.`)
+          )
+            return;
+
+          try {
+            const response = await fetch(
+              `/dashboard/api/eido/templates/${filename}`,
+              { method: "DELETE" }
+            );
+            if (!response.ok && response.status !== 204) {
+              const errorData = await response.json();
+              throw new Error(errorData.detail || "Deletion failed.");
+            }
+            showToast(`'${filename}' deleted successfully.`, "success");
+            fetchExistingTemplates();
+          } catch (error) {
+            showToast(error.message, "error");
+          }
+        }
+
+        let toastTimeout;
+        function showToast(message, type = "info") {
+          const toast = document.getElementById("toast");
+          toast.textContent = message;
+          toast.className = `toast show ${type}`;
+          clearTimeout(toastTimeout);
+          toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
         }
       });
-
-      // Toast notification utility
-      let toastTimeout;
-      function showToast(message, type = "info") {
-        const toast = document.getElementById("toast");
-        toast.textContent = message;
-        toast.className = `toast show ${type}`;
-        clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
-      }
-
-      document.addEventListener("DOMContentLoaded", initializePage);
     </script>
   </body>
 </html>

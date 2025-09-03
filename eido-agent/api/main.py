@@ -28,6 +28,12 @@ app.add_middleware(
 async def on_startup():
     """Initializes the database when the application starts."""
     logger.info("Application startup: Initializing database engine and session...")
+    
+    # --- ADDED: Runtime check for required settings ---
+    if not settings.database_url:
+        logger.critical("FATAL: DATABASE_URL is not set in the environment. The application cannot start without a database.")
+        raise RuntimeError("DATABASE_URL must be set for the EIDO agent to run.")
+        
     try:
         # This now creates the engine at the correct time, after env vars are loaded.
         create_db_engine_and_session()

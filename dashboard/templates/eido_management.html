@@ -12,6 +12,15 @@
       rel="stylesheet"
     />
     <style>
+      :root {
+        --background: #000;
+        --surface: #1a1a1a;
+        --primary: #ffc107;
+        --text-primary: #e0e0e0;
+        --text-secondary: #ccc;
+        --border-color: #333;
+        --danger: #d9534f;
+      }
       * {
         margin: 0;
         padding: 0;
@@ -19,8 +28,8 @@
       }
       body {
         font-family: "Inter", sans-serif;
-        background: #000;
-        color: #e0e0e0;
+        background: var(--background);
+        color: var(--text-primary);
       }
       .container {
         max-width: 1600px;
@@ -33,31 +42,31 @@
       }
       .header h1 {
         font-size: 2.5rem;
-        color: #ffc107;
+        color: var(--primary);
       }
       .back-link {
         display: inline-flex;
         align-items: center;
-        color: #e0e0e0;
+        color: var(--text-primary);
         text-decoration: none;
         font-weight: 500;
         margin-bottom: 2rem;
         transition: all 0.3s ease;
         padding: 0.75rem 1.5rem;
-        background: #1a1a1a;
-        border: 1px solid #333;
+        background: var(--surface);
+        border: 1px solid var(--border-color);
         border-radius: 8px;
       }
       .back-link:hover {
-        border-color: #ffc107;
+        border-color: var(--primary);
         transform: translateX(-5px);
       }
       .back-link i {
         margin-right: 0.5rem;
       }
       .card {
-        background: #1a1a1a;
-        border: 1px solid #333;
+        background: var(--surface);
+        border: 1px solid var(--border-color);
         border-radius: 12px;
         padding: 2rem;
       }
@@ -73,7 +82,7 @@
         padding: 0.5rem;
         background: #222;
         border: 1px solid #444;
-        color: #e0e0e0;
+        color: var(--text-primary);
         border-radius: 6px;
       }
       .bulk-actions {
@@ -90,7 +99,7 @@
         border-radius: 6px;
         cursor: pointer;
         background: #333;
-        color: #e0e0e0;
+        color: var(--text-primary);
         transition: all 0.2s ease;
         font-weight: 500;
       }
@@ -102,7 +111,7 @@
         opacity: 0.5;
       }
       .btn-danger {
-        background: #d9534f;
+        background: var(--danger);
         border-color: #d43f3a;
         color: #fff;
       }
@@ -110,9 +119,9 @@
         background: #c9302c;
       }
       .btn-primary {
-        background: #ffc107;
+        background: var(--primary);
         color: #000;
-        border-color: #ffc107;
+        border-color: var(--primary);
       }
       .btn-primary:hover {
         background: #ffda6a;
@@ -128,24 +137,17 @@
       td {
         padding: 1rem;
         text-align: left;
-        border-bottom: 1px solid #333;
+        border-bottom: 1px solid var(--border-color);
       }
       th {
         font-weight: 600;
-        color: #ccc;
+        color: var(--text-secondary);
       }
       tbody tr:hover {
         background: #222;
       }
-      .tag {
-        background: #333;
-        padding: 0.25rem 0.5rem;
-        border-radius: 4px;
-        font-size: 0.8em;
-        margin-right: 4px;
-      }
       .status-uncategorized {
-        color: #ffc107;
+        color: var(--primary);
       }
       .status-linked {
         color: #5cb85c;
@@ -176,7 +178,7 @@
         color: #fff;
         padding: 1rem 2rem;
         border-radius: 8px;
-        z-index: 1000;
+        z-index: 1050;
         opacity: 0;
         transition: opacity 0.3s ease;
         pointer-events: none;
@@ -188,7 +190,73 @@
         background: #5cb85c;
       }
       .toast.error {
-        background: #d9534f;
+        background: var(--danger);
+      }
+      .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1040;
+      }
+      .modal-overlay.visible {
+        display: flex;
+      }
+      .modal-content {
+        background: var(--surface);
+        padding: 2rem;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 1rem;
+        margin-bottom: 1rem;
+      }
+      .modal-header h2 {
+        color: var(--primary);
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        color: var(--text-secondary);
+        font-size: 1.5rem;
+        cursor: pointer;
+      }
+      .modal-body {
+        flex-grow: 1;
+        overflow-y: auto;
+      }
+      .modal-body textarea {
+        width: 100%;
+        height: 50vh;
+        background: #111;
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+        border-radius: 8px;
+        padding: 1rem;
+        font-family: monospace;
+        font-size: 0.9rem;
+      }
+      .modal-footer {
+        padding-top: 1rem;
+        margin-top: 1rem;
+        border-top: 1px solid var(--border-color);
+        display: flex;
+        justify-content: flex-end;
+        gap: 1rem;
       }
     </style>
   </head>
@@ -240,9 +308,7 @@
                 <th>Actions</th>
               </tr>
             </thead>
-            <tbody id="eido-table-body">
-              <!-- Rows will be populated by JavaScript -->
-            </tbody>
+            <tbody id="eido-table-body"></tbody>
           </table>
           <div id="loading-indicator" class="loading">
             <i class="fas fa-spinner"></i>Loading EIDO reports...
@@ -250,9 +316,32 @@
         </div>
       </div>
     </div>
+
+    <div class="modal-overlay" id="edit-modal-overlay">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modal-title">Edit EIDO JSON</h2>
+          <button class="modal-close" onclick="closeEditModal()">
+            &times;
+          </button>
+        </div>
+        <div class="modal-body">
+          <textarea id="json-editor"></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn" onclick="closeEditModal()">Cancel</button>
+          <button class="btn btn-primary" id="save-json-btn">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </div>
+
     <div id="toast" class="toast"></div>
 
     <script>
+      let eidoDataCache = [];
+
       document.addEventListener("DOMContentLoaded", () => {
         const statusFilter = document.getElementById("status-filter");
         const selectAllCheckbox = document.getElementById(
@@ -288,44 +377,45 @@
             `/dashboard/api/eidos${status ? "?status=" + status : ""}`
           );
           if (!response.ok) throw new Error("Failed to fetch EIDOs");
-          const eidos = await response.json();
+          eidoDataCache = await response.json();
 
-          if (eidos.length === 0) {
+          if (eidoDataCache.length === 0) {
             tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">No EIDO reports found.</td></tr>`;
           } else {
-            eidos.forEach((eido) => {
+            eidoDataCache.forEach((eido) => {
               const row = document.createElement("tr");
               const incidentInfo =
                 eido.incidents && eido.incidents.length > 0
                   ? `<a href="/dashboard/incident/${
                       eido.incidents[0].incident_id
-                    }">${eido.incidents[0].name.substring(0, 20)}...</a>`
+                    }">${eido.incidents[0].name.substring(0, 30)}...</a>`
                   : "N/A";
 
               row.innerHTML = `
-                            <td><input type="checkbox" class="row-checkbox" data-id="${
-                              eido.id
-                            }" onchange="updateBulkActionsVisibility()"></td>
-                            <td>${eido.id.substring(0, 8)}...</td>
-                            <td><span class="status-${eido.status}">${
+                <td><input type="checkbox" class="row-checkbox" data-id="${
+                  eido.id
+                }" onchange="updateBulkActionsVisibility()"></td>
+                <td>${eido.id.substring(0, 8)}...</td>
+                <td><span class="status-${eido.status}">${
                 eido.status
               }</span></td>
-                            <td>${incidentInfo}</td>
-                            <td>${eido.source}</td>
-                            <td>${new Date(
-                              eido.timestamp
-                            ).toLocaleString()}</td>
-                            <td>
-                                <button class="btn btn-danger" onclick="handleDelete('${
-                                  eido.id
-                                }')">Delete</button>
-                            </td>
-                        `;
+                <td>${incidentInfo}</td>
+                <td>${eido.source}</td>
+                <td>${new Date(eido.timestamp).toLocaleString()}</td>
+                <td>
+                    <button class="btn" onclick="openEditModal('${
+                      eido.id
+                    }')"><i class="fas fa-edit"></i> Edit</button>
+                    <button class="btn btn-danger" onclick="handleDelete('${
+                      eido.id
+                    }')"><i class="fas fa-trash"></i> Delete</button>
+                </td>
+            `;
               tableBody.appendChild(row);
             });
           }
         } catch (error) {
-          tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:#d9534f;">${error.message}</td></tr>`;
+          tableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--danger);">${error.message}</td></tr>`;
           console.error(error);
         } finally {
           loadingIndicator.style.display = "none";
@@ -432,6 +522,68 @@
           fetchEidos(document.getElementById("status-filter").value);
         } catch (error) {
           showToast(error.message, "error");
+        }
+      }
+
+      function openEditModal(eidoId) {
+        const eido = eidoDataCache.find((e) => e.id === eidoId);
+        if (!eido || !eido.original_eido) {
+          showToast("EIDO data not available for editing.", "error");
+          return;
+        }
+        document.getElementById(
+          "modal-title"
+        ).innerText = `Edit EIDO: ${eido.id.substring(0, 8)}...`;
+        const editor = document.getElementById("json-editor");
+        editor.value = JSON.stringify(eido.original_eido, null, 2);
+
+        const saveBtn = document.getElementById("save-json-btn");
+        saveBtn.onclick = () => handleSaveEido(eidoId); // Set context for the save button
+
+        document.getElementById("edit-modal-overlay").classList.add("visible");
+      }
+
+      function closeEditModal() {
+        document
+          .getElementById("edit-modal-overlay")
+          .classList.remove("visible");
+      }
+
+      async function handleSaveEido(eidoId) {
+        const editor = document.getElementById("json-editor");
+        let newJson;
+        try {
+          newJson = JSON.parse(editor.value);
+        } catch (e) {
+          showToast(
+            "Invalid JSON format. Please correct and try again.",
+            "error"
+          );
+          return;
+        }
+
+        const saveBtn = document.getElementById("save-json-btn");
+        saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Saving...';
+        saveBtn.disabled = true;
+
+        try {
+          const response = await fetch(`/dashboard/api/eidos/${eidoId}`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ original_eido: newJson }),
+          });
+          if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.detail || "Failed to save EIDO.");
+          }
+          showToast("EIDO updated successfully!", "success");
+          closeEditModal();
+          fetchEidos(document.getElementById("status-filter").value);
+        } catch (error) {
+          showToast(error.message, "error");
+        } finally {
+          saveBtn.innerHTML = "Save Changes";
+          saveBtn.disabled = false;
         }
       }
 

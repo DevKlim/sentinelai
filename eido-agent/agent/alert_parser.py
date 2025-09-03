@@ -2,7 +2,7 @@ from agent.agent_core import get_eido_agent
 # In the future, you could import geocoding services here
 # from services.geocoding import geocode_clues
 
-async def process_text_alert(scenario_description: str, template_name: str) -> dict:
+def process_text_alert(scenario_description: str, template_name: str) -> dict:
     """
     High-level function to process a raw text alert using the EidoAgent.
     1. Generates a structured EIDO using the agent's RAG-enhanced LLM call.
@@ -17,7 +17,8 @@ async def process_text_alert(scenario_description: str, template_name: str) -> d
     # Step 1: Use the centralized EidoAgent to generate the EIDO.
     # This ensures the RAG logic is always applied.
     agent = get_eido_agent()
-    generated_eido = await agent.generate_eido_from_template_and_scenario(
+    # FIX: Removed incorrect 'await' for a synchronous function call
+    generated_eido = agent.generate_eido_from_template_and_scenario(
         template_name, scenario_description
     )
     

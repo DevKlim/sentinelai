@@ -1,4 +1,4 @@
-# file: sentinelai/Dockerfile
+# sentinelai/Dockerfile
 # sdsc-orchestrator/Dockerfile
 # Stage 1: Build the Next.js application (landing page)
 FROM node:18-alpine AS landing-builder
@@ -34,6 +34,10 @@ COPY eido-agent /app/eido-agent
 COPY idx-agent /app/idx-agent
 COPY calls_processing.py /app/
 COPY run-services.sh /app/
+
+# --- FIX: Run the RAG indexer during the build ---
+RUN python /app/eido-agent/utils/rag_indexer.py
+
 RUN chmod +x /app/run-services.sh
 
 # Final stage: Production image

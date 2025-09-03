@@ -1,6 +1,5 @@
-# sentinelai/eido-agent/api/endpoints.py
 from fastapi import APIRouter, Depends, HTTPException, Body, Query, status
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional, Dict, Any
 import uuid
@@ -9,14 +8,15 @@ from pydantic import BaseModel
 
 from database.session import get_db
 from data_models.schemas import (
-    EidoGenerationRequest, IngestRequest, LinkEidoRequest, TagRequest, EidoBulkActionRequest,
-    IncidentPublic, IncidentDetailPublic, EidoReportPublic
+    IngestRequest, LinkEidoRequest, TagRequest, EidoBulkActionRequest,
+    IncidentPublic, IncidentDetailPublic, EidoReportPublic,
+    UpdateEidoRequest, UpdateStatsRequest
 )
 from services import database as db_service
-from services import eido_retriever
 from agent.agent_core import get_eido_agent
 from agent.llm_interface import llm_interface
 from config.settings import settings
+from services.schema_service import schema_service # Import the service instance
 
 router = APIRouter(prefix="/api/v1", tags=["EIDO Agent"])
 
@@ -26,77 +26,84 @@ class RenameRequest(BaseModel):
 class CreateIncidentRequest(BaseModel):
     name: str
 
-# New Pydantic models for template endpoints
 class TemplateCreationRequest(BaseModel):
+    event_type: str
     description: str
+
+class EidoGenerationRequest(BaseModel):
+    event_type: str
+    scenario_description: str
 
 class TemplateSaveRequest(BaseModel):
     filename: str
     content: Dict[str, Any]
 
-# Template Management Endpoints (moved from templates_router)
+
+# --- Template Management Endpoints ---
+
 @router.get("/templates", response_model=List[str], tags=["Templates"])
-async def get_template_list():
-    """Lists all available EIDO template files."""
-    return eido_retriever.list_templates()
+async def list_eido_templates():
+    """Lists all available EIDO template filenames."""
+    return schema_service.list_templates()
 
 @router.get("/templates/{filename}", response_model=Dict[str, Any], tags=["Templates"])
-async def get_single_template(filename: str):
-    """Retrieves the content of a single EIDO template file."""
-    template_content = eido_retriever.get_template(filename)
-    if template_content is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Template not found.")
-    return template_content
-
-@router.delete("/templates/{filename}", status_code=status.HTTP_204_NO_CONTENT, tags=["Templates"])
-async def delete_single_template(filename: str):
-    """Deletes a single EIDO template file."""
+async def get_eido_template(filename: str):
+    """Retrieves the content of a specific EIDO template."""
     try:
-        success = eido_retriever.delete_template(filename)
-        if not success:
-            # This case covers file not found or other OS errors
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Template '{filename}' not found or could not be deleted.")
+        return schema_service.get_template(filename)
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except ValueError as e:
-        # This catches the specific error for the protected template
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
-    except Exception as e:
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/templates", status_code=status.HTTP_201_CREATED, tags=["Templates"])
-async def save_new_template(request: TemplateSaveRequest):
-    """Saves a new EIDO template file."""
+async def save_eido_template(request: TemplateSaveRequest):
+    """Saves a new EIDO template."""
     try:
-        success = eido_retriever.save_template(request.filename, request.content)
-        if not success:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to save template due to an unexpected error.")
+        schema_service.save_template(request.filename, request.content)
+        return {"message": f"Template '{request.filename}' saved successfully."}
     except ValueError as e:
-        # Catch the specific error for protected files or invalid names
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    
-    return {"message": f"Template '{request.filename}' saved successfully."}
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to save template: {e}")
+
+@router.delete("/templates/{filename}", status_code=status.HTTP_204_NO_CONTENT, tags=["Templates"])
+async def delete_eido_template(filename: str):
+    """Deletes an EIDO template."""
+    try:
+        schema_service.delete_template(filename)
+        return None
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to delete template: {e}")
+
 
 @router.post("/templates/generate", response_model=Dict[str, Any], tags=["Templates"])
-async def generate_new_template_from_description(request: TemplateCreationRequest):
+async def create_eido_template(request: TemplateCreationRequest):
     """Generates a new EIDO template using a natural language description and RAG."""
     try:
         agent = get_eido_agent()
-        new_template = await agent.create_eido_template(request.description)
+        new_template = agent.create_eido_template(request.event_type, request.description)
         if "error" in new_template:
              raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=new_template.get("raw_response", "LLM failed to generate valid JSON."))
         return {"generated_template": new_template}
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate template: {str(e)}")
 
-# New endpoint for Schema Index
+# --- Schema Endpoints ---
+
 @router.get("/schema/index", response_model=Dict[str, Any], tags=["Schema"])
 async def get_schema_index():
-    """Serves the pre-built RAG index file for the UI."""
-    index_path = os.path.join(os.path.dirname(__file__), '..', 'services', 'eido_schema_index.json')
-    if not os.path.exists(index_path):
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schema index file not found. Ensure the build process ran correctly.")
-    # FastAPI's FileResponse handles the content type automatically for JSON files
-    return FileResponse(index_path, media_type="application/json")
+    """Serves the pre-built RAG index chunks for the UI."""
+    chunks = schema_service.get_rag_chunks()
+    if not chunks:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Schema index is not loaded or is empty.")
+    return {"chunks": chunks}
 
+# --- Settings Endpoints ---
 
 @router.get("/settings/env", response_model=dict, tags=["Settings"])
 async def get_eido_env_settings():
@@ -161,28 +168,25 @@ async def update_env_settings(payload: dict = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update EIDO Agent settings: {e}")
 
+# --- EIDO Generation and Ingestion ---
 
-@router.post("/generate_eido_from_template", response_model=Dict[str, Any], tags=["EIDO Generation"])
-async def generate_eido_from_template(request: EidoGenerationRequest):
+@router.post("/generate_eido_from_scenario", response_model=Dict[str, Any], tags=["EIDO Generation"])
+async def generate_eido_from_scenario(request: EidoGenerationRequest):
     """
-    Generates an EIDO JSON from a text description using a specified template,
-    enhanced with RAG context from the EIDO schema.
+    Generates an EIDO JSON from a text description using a specified event type.
     """
     try:
-        # Delegate the entire generation logic to the EidoAgent
         agent = get_eido_agent()
-        filled_eido = await agent.generate_eido_from_template_and_scenario(
-            template_name=request.template_name,
+        filled_eido = agent.generate_eido_from_scenario(
+            event_type=request.event_type,
             scenario_description=request.scenario_description
         )
         return {"generated_eido": filled_eido}
     except FileNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except RuntimeError as e:
-        # This can be triggered if the LLM client fails to initialize
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"LLM Service Unavailable: {str(e)}")
     except Exception as e:
-        # Catch-all for other unexpected errors during generation
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to generate EIDO: {str(e)}")
 
 
@@ -202,19 +206,13 @@ async def ingest_eido(request: IngestRequest, db: AsyncSession = Depends(get_db)
         if not report_db:
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to create EIDO report record in the database.")
 
-        return EidoReportPublic(
-            id=report_db.eido_id,
-            timestamp=report_db.timestamp,
-            source=report_db.source,
-            description=report_db.description,
-            original_eido=report_db.original_eido,
-            location=report_db.location,
-            status=report_db.status,
-            incidents=[]
-        )
+        return await db_service._db_eido_to_public_pydantic(db, report_db)
+
     except Exception as e:
         print(f"Error during EIDO ingestion: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An internal error occurred during ingestion: {str(e)}")
+
+# --- Incident Management ---
 
 @router.get("/incidents", response_model=List[IncidentPublic], tags=["Incidents"])
 async def get_all_incidents(
@@ -293,6 +291,38 @@ async def rename_incident_endpoint(incident_id: uuid.UUID, request: RenameReques
             return p_inc
     raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found after renaming.")
 
+@router.post("/incidents/{incident_id}/update_stats", response_model=IncidentDetailPublic, tags=["Incidents"])
+async def update_incident_stats_via_llm(incident_id: uuid.UUID, request: UpdateStatsRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Updates an incident by modifying its latest EIDO report using LLM-driven changes.
+    """
+    latest_report = await db_service.get_latest_report_for_incident(db, str(incident_id))
+    if not latest_report or not latest_report.original_eido:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Latest report for incident not found or has no EIDO JSON to modify.")
+
+    updates_description = "Please apply the following updates:\n"
+    for key, value in request.stats.items():
+        updates_description += f"- Update '{key}' to '{value}'.\n"
+
+    try:
+        agent = get_eido_agent()
+        modified_eido = agent.modify_eido(latest_report.original_eido, updates_description)
+
+        if "error" in modified_eido:
+             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=modified_eido.get("raw_response", "LLM failed to generate valid updated JSON."))
+        
+        await db_service.update_eido_report(db, latest_report.eido_id, modified_eido)
+        
+        updated_incident = await db_service.get_incident_details(db, str(incident_id))
+        if not updated_incident:
+             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Incident not found after update.")
+        return updated_incident
+
+    except Exception as e:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to update incident stats: {str(e)}")
+
+# --- EIDO Report Management ---
+
 @router.get("/eidos", response_model=List[EidoReportPublic], tags=["EIDO Reports"])
 async def get_all_eidos(
     status: Optional[str] = Query(None, description="Filter EIDOs by status (e.g., 'uncategorized')"),
@@ -320,3 +350,12 @@ async def delete_single_eido(eido_id: uuid.UUID, db: AsyncSession = Depends(get_
     if not success:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIDO report not found or could not be deleted.")
     return None
+
+@router.put("/eidos/{eido_id}", response_model=EidoReportPublic, tags=["EIDO Reports"])
+async def update_eido(eido_id: uuid.UUID, request: UpdateEidoRequest, db: AsyncSession = Depends(get_db)):
+    """Updates the content of a specific EIDO report."""
+    updated_report_db = await db_service.update_eido_report(db, str(eido_id), request.original_eido)
+    if not updated_report_db:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="EIDO report not found.")
+    
+    return await db_service._db_eido_to_public_pydantic(db, updated_report_db)

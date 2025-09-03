@@ -1,4 +1,4 @@
-# file: sentinelai/Dockerfile.python-services
+# sentinelai/Dockerfile.python-services
 # sdsc-orchestrator/Dockerfile.python-services
 # Base image
 FROM python:3.10-slim
@@ -23,6 +23,10 @@ RUN pip install --no-cache-dir -r requirements.python-services.txt
 # Copy application code for both agents
 COPY eido-agent /app/eido-agent
 COPY idx-agent /app/idx-agent
+
+# --- FIX: Run the RAG indexer during the build ---
+# This creates the eido_schema_index.json file inside the image.
+RUN python /app/eido-agent/utils/rag_indexer.py
 
 # Expose ports for the two API services
 EXPOSE 8000 8001

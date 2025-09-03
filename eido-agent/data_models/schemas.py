@@ -23,7 +23,7 @@ class IngestRequest(BaseModel):
     original_eido: Dict[str, Any]
 
 class EidoGenerationRequest(BaseModel):
-    template_name: str
+    event_type: str
     scenario_description: str
 
 
@@ -124,6 +124,13 @@ class EidoBulkActionRequest(BaseModel):
     action_type: str # FIX: Renamed from 'action' to match database service usage
     eido_ids: List[str]
     target_incident_id: Optional[str] = None
+
+# --- Schemas for Editing ---
+class UpdateEidoRequest(BaseModel):
+    original_eido: Dict[str, Any]
+
+class UpdateStatsRequest(BaseModel):
+    stats: Dict[str, Any]
 
 # --- FIX for ImportError ---
 # Alias EidoReport to ReportCoreData to satisfy imports in other modules

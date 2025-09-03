@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.security import OAuth2PasswordRequestForm
 import httpx
 import os
 import json
@@ -13,6 +14,10 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, List, Optional
 from dotenv import load_dotenv
 import traceback
+
+# Authentication imports
+from . import auth
+from .auth import User, UserCreate, Token
 
 # Attempt to import LLM clients
 try:
@@ -27,6 +32,14 @@ except ImportError:
 
 # Load environment variables from a .env file if it exists
 load_dotenv()
+
+# --- Initialize Auth User DB ---
+# If users.json doesn't exist, create it on startup.
+if not os.path.exists(auth.USERS_DB_FILE):
+    print(f"User database not found. Creating a new one at {auth.USERS_DB_FILE}")
+    with open(auth.USERS_DB_FILE, 'w') as f:
+        json.dump({"users": []}, f)
+
 
 app = FastAPI()
 templates_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates")
@@ -118,11 +131,55 @@ class DashboardSettings(BaseModel):
 
 # --- Add Pydantic models for new requests ---
 class TemplateCreationRequest(BaseModel):
+    event_type: str
     description: str
 
 class TemplateSaveRequest(BaseModel):
     filename: str
     content: Dict[str, Any]
+
+class UpdateEidoRequest(BaseModel):
+    original_eido: Dict[str, Any]
+
+class UpdateStatsRequest(BaseModel):
+    stats: Dict[str, Any]
+
+class AgenticQueryRequest(BaseModel):
+    query: str
+    chat_history: List[Dict[str, str]] = []
+
+# --- AUTHENTICATION ENDPOINTS ---
+
+@app.post("/token", response_model=Token, tags=["Auth"])
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    """Login endpoint to get a JWT token."""
+    user = auth.get_user(form_data.username)
+    if not user or not auth.verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=401,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
+
+@app.post("/users/register", response_model=User, tags=["Auth"])
+async def register_user(user: UserCreate):
+    """Registration endpoint to create a new user."""
+    db_user = auth.get_user(user.username)
+    if db_user:
+        raise HTTPException(status_code=400, detail="Username already registered")
+    created_user = auth.create_user(user)
+    return User(username=created_user.username)
+    
+@app.get("/users/me", response_model=User, tags=["Auth"])
+async def read_users_me(current_user: User = Depends(auth.get_current_user)):
+    """Endpoint to verify a token and get the current user's info."""
+    return current_user
+
 
 # --- Core Endpoints ---
 
@@ -225,20 +282,18 @@ Return a JSON object with a single key 'reports', which is a list of strings. Ea
                 raise HTTPException(status_code=400, detail="Could not identify any valid, non-empty incident reports in the file.")
 
             # Unified Processing Loop
-            gen_url = f"{config['EIDO_API_URL']}/api/v1/generate_eido_from_template"
+            gen_url = f"{config['EIDO_API_URL']}/api/v1/generate_eido_from_scenario"
             results = []
             for i, text in enumerate(incident_texts):
                 scenario_description = text
                 try:
-                    # If the text is a JSON string (from .jsonl), extract transcript
                     report_data = json.loads(text)
                     if isinstance(report_data, dict) and 'Transcript' in report_data:
                         scenario_description = report_data['Transcript']
                 except (json.JSONDecodeError, TypeError):
-                    # It's plain text from an LLM split, which is fine.
                     pass
 
-                gen_payload = {"template_name": template_name, "scenario_description": scenario_description}
+                gen_payload = {"event_type": template_name, "scenario_description": scenario_description}
                 gen_response = await client.post(gen_url, json=gen_payload)
                 gen_response.raise_for_status()
                 eido_to_ingest = gen_response.json().get("generated_eido")
@@ -307,7 +362,7 @@ async def eido_submit_page(request: Request):
     templates_available = ["detailed_incident.json", "general_incident.json", "fire_incident.json"]
     return templates.TemplateResponse("eido_submit.html", {"request": request, "templates": templates_available})
 
-# --- NEW: EIDO Creator Interface and API Endpoints ---
+# --- EIDO Creator Interface and API Endpoints ---
 
 @app.get("/eido/create", response_class=HTMLResponse)
 async def eido_creator_page(request: Request):
@@ -358,8 +413,8 @@ async def generate_eido_template_proxy(request: TemplateCreationRequest):
         async with httpx.AsyncClient() as client:
             response = await client.post(
                 f"{config['EIDO_API_URL']}/api/v1/templates/generate",
-                json={"description": request.description},
-                timeout=120.0  # Allow longer timeout for LLM generation
+                json={"event_type": request.event_type, "description": request.description},
+                timeout=120.0
             )
             response.raise_for_status()
             return JSONResponse(content=response.json())
@@ -487,7 +542,6 @@ async def download_incident_zip(incident_id: str):
 
 @app.get("/api/incidents/{incident_id}/composite-eido", response_class=JSONResponse)
 async def create_composite_eido(incident_id: str):
-    # Check for LLM client moved to generate_llm_content
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(
@@ -531,12 +585,7 @@ Now, generate the single composite EIDO based on the provided history.
 
 @app.post("/api/incidents/{incident_id}/predict_actions", response_class=JSONResponse)
 async def predict_next_actions(incident_id: str):
-    """
-    Analyzes an incident's history of EIDO reports and uses an LLM to predict
-    the next likely event and suggest actionable steps.
-    """
     try:
-        # 1. Fetch incident history from EIDO agent
         async with httpx.AsyncClient() as client:
             response = await client.get(
                 f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=45.0
@@ -544,15 +593,12 @@ async def predict_next_actions(incident_id: str):
             response.raise_for_status()
             incident = response.json()
 
-        # 2. Prepare data for the LLM prompt
         eidos_to_process = [report.get("original_eido") for report in incident.get("reports", []) if report.get("original_eido")]
         if not eidos_to_process:
             raise HTTPException(status_code=404, detail="No EIDO reports found for this incident to make a prediction.")
 
-        # Limit to the last 10 reports to keep the prompt size reasonable
         eidos_history_str = json.dumps(eidos_to_process[-10:], indent=2)
 
-        # 3. Create a detailed prompt for the LLM
         prompt = f"""
 You are an expert emergency response strategist and command officer. Your task is to analyze the history of an incident, provided as a sequence of EIDO (Emergency Incident Data Object) JSONs, and predict the next logical event or recommend the next course of action for dispatchers and field units.
 
@@ -562,31 +608,81 @@ You are an expert emergency response strategist and command officer. Your task i
 ---
 
 **Analysis and Prediction Task:**
-Based on the incident's progression (e.g., initial report, units dispatched, on-scene reports), what is the most likely next significant event? Consider the incident type, severity, units already involved, and the information contained in the reports.
+Based on the incident's progression, what is the most likely next significant event?
 
 **Required Output Format:**
 Your response MUST be a single, valid JSON object and nothing else. The JSON object must have the following structure:
 {{
-  "prediction_summary": "A concise, one-sentence summary of the predicted next event. Examples: 'A specialized HAZMAT unit will be dispatched to the scene,' or 'The incident commander will request additional law enforcement for crowd control.'",
+  "prediction_summary": "A concise, one-sentence summary of the predicted next event.",
   "suggested_actions": [
-    "A concrete, actionable suggestion for the dispatcher. Example: 'Dispatch Engine 42 (HAZMAT) to the primary location.'",
-    "A second actionable suggestion for units on scene. Example: 'Advise all units to maintain a 300-foot perimeter and await HAZMAT arrival.'",
-    "A third actionable suggestion, which could be for command or other agencies. Example: 'Notify the county's environmental protection agency of a potential chemical spill.'"
+    "A concrete, actionable suggestion for the dispatcher.",
+    "A second actionable suggestion for units on scene.",
+    "A third actionable suggestion for command or other agencies."
   ]
 }}
 """
-        # 4. Call the LLM and parse the response
         llm_response_text = await generate_llm_content(prompt)
         clean_response = llm_response_text.strip().replace("```json", "").replace("```", "").strip()
         prediction_data = json.loads(clean_response)
 
-        # 5. Return the structured prediction data
         return JSONResponse(content=prediction_data, status_code=200)
 
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except json.JSONDecodeError as e:
         raise HTTPException(status_code=500, detail=f"LLM returned malformed JSON. Error: {str(e)}. Raw response: {llm_response_text}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"An unexpected internal error occurred: {str(e)}")
+
+@app.post("/api/incidents/{incident_id}/agentic_query", response_class=JSONResponse)
+async def agentic_query(incident_id: str, request: AgenticQueryRequest):
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}", timeout=45.0
+            )
+            response.raise_for_status()
+            incident = response.json()
+
+        incident_context_str = json.dumps(incident, indent=2)
+        chat_history_str = "\n".join([f"{msg['role']}: {msg['content']}" for msg in request.chat_history])
+
+        prompt = f"""
+You are SentinelAI, an expert Command Center AI Assistant. Your role is to help emergency dispatchers and commanders analyze and manage an active incident. You are conversational, analytical, and proactive.
+
+**CURRENT INCIDENT CONTEXT:**
+Here is the complete data for the incident you are currently focused on. This is your primary source of truth.
+---
+{incident_context_str}
+---
+
+**CONVERSATION HISTORY:**
+Here is the conversation so far with the human operator.
+---
+{chat_history_str}
+---
+
+**OPERATOR'S LATEST QUERY:**
+---
+{request.query}
+---
+
+**YOUR TASK:**
+Based on the incident context and conversation history, provide a helpful, concise, and actionable response to the operator's query.
+- If the query is a question, answer it using the incident data.
+- If the query is a command, describe the action you would take and what the expected outcome would be.
+- You can suggest looking for related incidents or contacting other agencies, framing it as a recommendation. For example: "Based on the fire's proximity to the canyon, searching for past 'canyon fire' or 'mudslide' incidents in the IDX database could provide valuable tactical insights. Shall I proceed with that search?"
+- Keep your responses clear and focused on the operational needs of a command center.
+"""
+        llm_response_text = await generate_llm_content(prompt)
+
+        return JSONResponse(content={"response": llm_response_text})
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except HTTPException:
         raise
     except Exception as e:
@@ -678,15 +774,17 @@ async def get_trends():
         dates.reverse()
         return JSONResponse(content={"daily_counts": {"dates": dates, "counts": [0]*30}, "error": f"Analytics error: {str(e)}"})
 
-# --- Settings Page and API ---
+# --- Settings Page and API (PROTECTED) ---
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request):
+    # The HTML page itself handles the auth flow with JavaScript.
+    # It will show a login form if the user is not authenticated.
     return templates.TemplateResponse("settings.html", {"request": request})
 
 @app.get("/api/settings/dashboard", response_model=DashboardSettings)
-async def get_dashboard_settings():
-    """Gets current dashboard-level settings."""
+async def get_dashboard_settings(current_user: User = Depends(auth.get_current_user)):
+    """Gets current dashboard-level settings. Requires authentication."""
     masked_key = config.get("LLM_API_KEY")
     if masked_key:
         masked_key = "********"
@@ -713,26 +811,25 @@ async def push_settings_to_agent(agent: str, settings_to_push: dict):
         print(f"Warning: Could not push settings to {agent} agent: {e}")
 
 @app.post("/api/settings/dashboard", response_model=dict)
-async def update_dashboard_settings(new_settings: DashboardSettings):
-    """Updates dashboard-level settings, re-initializes clients, and propagates to agents."""
+async def update_dashboard_settings(
+    new_settings: DashboardSettings, current_user: User = Depends(auth.get_current_user)
+):
+    """Updates dashboard-level settings, re-initializes clients, and propagates to agents. Requires authentication."""
     global config
     config["EIDO_API_URL"] = new_settings.EIDO_API_URL
     config["IDX_API_URL"] = new_settings.IDX_API_URL
     config["LLM_PROVIDER"] = new_settings.LLM_PROVIDER
     config["LLM_MODEL"] = new_settings.LLM_MODEL
 
-    # Update dashboard's own LLM client
     if new_settings.LLM_API_KEY and new_settings.LLM_API_KEY != "********":
         config["LLM_API_KEY"] = new_settings.LLM_API_KEY
     initialize_llm_client()
 
-    # --- FIX: Propagate LLM settings to agents ---
     if new_settings.LLM_API_KEY and new_settings.LLM_API_KEY != "********":
         common_api_key = new_settings.LLM_API_KEY
         common_provider = new_settings.LLM_PROVIDER
         common_model = new_settings.LLM_MODEL
 
-        # Prepare settings for EIDO agent
         eido_settings = {
             "EIDO_LLM_PROVIDER": common_provider,
             "EIDO_GOOGLE_MODEL_NAME": common_model,
@@ -744,7 +841,6 @@ async def update_dashboard_settings(new_settings: DashboardSettings):
         }
         await push_settings_to_agent("eido", eido_settings)
 
-        # Prepare settings for IDX agent
         idx_settings = {
             "IDX_LLM_PROVIDER": common_provider,
             "IDX_GOOGLE_MODEL_NAME": common_model,
@@ -762,7 +858,8 @@ async def update_dashboard_settings(new_settings: DashboardSettings):
 
 
 @app.get("/api/settings/agent/{agent}")
-async def get_agent_settings(agent: str):
+async def get_agent_settings(agent: str, current_user: User = Depends(auth.get_current_user)):
+    """Gets agent settings. Requires authentication."""
     if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
     elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
     else: raise HTTPException(status_code=404, detail="Agent not found")
@@ -775,7 +872,10 @@ async def get_agent_settings(agent: str):
         raise HTTPException(status_code=502, detail=f"Could not connect to {agent} agent: {e}")
 
 @app.post("/api/settings/agent/{agent}")
-async def update_agent_settings(agent: str, payload: SettingsUpdate):
+async def update_agent_settings(
+    agent: str, payload: SettingsUpdate, current_user: User = Depends(auth.get_current_user)
+):
+    """Updates agent settings. Requires authentication."""
     if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
     elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
     else: raise HTTPException(status_code=404, detail="Agent not found")
@@ -788,7 +888,8 @@ async def update_agent_settings(agent: str, payload: SettingsUpdate):
         raise HTTPException(status_code=502, detail=f"Could not update settings on {agent} agent: {e}")
 
 @app.get("/api/settings/idx/categorizer/status")
-async def get_categorizer_status():
+async def get_categorizer_status(current_user: User = Depends(auth.get_current_user)):
+    """Gets the status of the IDX categorizer. Requires authentication."""
     try:
         async with httpx.AsyncClient() as client:
             response = await client.get(f"{config['IDX_API_URL']}/api/v1/settings/categorizer/status", timeout=10.0)
@@ -798,7 +899,8 @@ async def get_categorizer_status():
         raise HTTPException(status_code=502, detail=f"Could not get categorizer status from IDX agent: {e}")
 
 @app.post("/api/settings/idx/categorizer/toggle")
-async def toggle_categorizer(request: Request):
+async def toggle_categorizer(request: Request, current_user: User = Depends(auth.get_current_user)):
+    """Toggles the IDX categorizer on or off. Requires authentication."""
     body = await request.json()
     enable = body.get('enable')
     if enable is None: raise HTTPException(status_code=400, detail="Missing 'enable' parameter.")
@@ -865,3 +967,37 @@ async def delete_single_eido_proxy(eido_id: str):
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.put("/api/eidos/{eido_id}", response_class=JSONResponse)
+async def update_eido_proxy(eido_id: str, request: UpdateEidoRequest):
+    """Proxies request to update a single EIDO report."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.put(
+                f"{config['EIDO_API_URL']}/api/v1/eidos/{eido_id}",
+                json={"original_eido": request.original_eido},
+                timeout=120.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not update EIDO on Agent: {e}")
+
+@app.post("/api/incidents/{incident_id}/update_stats", response_class=JSONResponse)
+async def update_incident_stats_proxy(incident_id: str, request: UpdateStatsRequest):
+    """Proxies request to update incident stats via LLM."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['EIDO_API_URL']}/api/v1/incidents/{incident_id}/update_stats",
+                json={"stats": request.stats},
+                timeout=180.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not update stats on EIDO Agent: {e}")
