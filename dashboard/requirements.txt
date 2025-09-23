@@ -8,4 +8,5 @@ google-generativeai>=0.5.0
 openai>=1.3.0
 python-dotenv>=1.0.0
 passlib[bcrypt]>=1.7.4
+bcrypt # <-- FIX: Added this line
 python-jose[cryptography]>=3.3.0

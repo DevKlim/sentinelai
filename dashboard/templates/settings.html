@@ -336,6 +336,12 @@
               >
               <input type="text" id="idx-api-url" class="form-control" />
             </div>
+            <div class="form-group">
+              <label for="geocoding-api-url" class="form-label"
+                >Geocoding Agent API URL</label
+              >
+              <input type="text" id="geocoding-api-url" class="form-control" />
+            </div>
             <hr style="border-color: #333; margin: 2rem 0" />
             <div class="form-group">
               <label for="llm-provider" class="form-label">LLM Provider</label>
@@ -482,6 +488,7 @@
           const settings = await apiFetch("/dashboard/api/settings/dashboard");
           document.getElementById("eido-api-url").value = settings.EIDO_API_URL;
           document.getElementById("idx-api-url").value = settings.IDX_API_URL;
+          document.getElementById("geocoding-api-url").value = settings.GEOCODING_API_URL;
           document.getElementById("llm-provider").value = settings.LLM_PROVIDER;
           document.getElementById("llm-model").value = settings.LLM_MODEL;
           // Also fetch the categorizer status
@@ -577,6 +584,7 @@
           const settingsData = {
             EIDO_API_URL: document.getElementById("eido-api-url").value,
             IDX_API_URL: document.getElementById("idx-api-url").value,
+            GEOCODING_API_URL: document.getElementById("geocoding-api-url").value,
             LLM_PROVIDER: document.getElementById("llm-provider").value,
             LLM_MODEL: document.getElementById("llm-model").value,
             LLM_API_KEY:

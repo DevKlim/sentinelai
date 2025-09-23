@@ -13,6 +13,7 @@ if [ "$SERVICE" = "web" ]; then
   echo "Starting dashboard service..."
   export EIDO_API_URL="http://localhost:8000"
   export IDX_API_URL="http://localhost:8001"
+  export GEOCODING_API_URL="http://localhost:8002"
   # The dashboard's own API endpoints will use these variables to talk to the other services.
   python3 -m uvicorn dashboard.main:app --host 0.0.0.0 --port 8080 &
 

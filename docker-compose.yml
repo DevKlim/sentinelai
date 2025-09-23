@@ -68,13 +68,13 @@ services:
     env_file: .env
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@eido_db:5432/${POSTGRES_DB:-eido_db}
-      # EIDO_*, IDX_*, and other variables are now loaded exclusively from the .env file via `env_file: .env`
-      # This prevents conflicts and ensures agent-specific keys are used correctly.
       - EIDO_AGENT_URL=http://localhost:8000
       - IDX_AGENT_URL=http://localhost:8001
+      - GEOCODING_AGENT_URL=http://localhost:8002
     ports:
       - "8000:8000"
       - "8001:8001"
+      - "8002:8002"
     depends_on:
       eido_db:
         condition: service_healthy

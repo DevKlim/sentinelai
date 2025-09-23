@@ -11,6 +11,7 @@ echo "------------------------------------------------------------------"
 # In this single-container setup, all processes can reach each other on localhost.
 export EIDO_AGENT_URL="http://localhost:8000"
 export IDX_AGENT_URL="http://localhost:8001"
+export GEOCODING_AGENT_URL="http://localhost:8002"
 
 # This trap will execute on SIGINT or SIGTERM, cleaning up child processes
 trap "echo '--- Shutting down services ---'; pkill -P $$" SIGINT SIGTERM
@@ -22,6 +23,10 @@ echo "--- Starting EIDO Agent API ---"
 echo "--- Starting IDX Agent API ---"
 # Change directory into the service folder before running uvicorn
 (cd /app/idx-agent && uvicorn api.main:app --host 0.0.0.0 --port 8001) &
+
+echo "--- Starting Geocoding Agent API ---"
+# Change directory into the service folder before running uvicorn
+(cd /app/geocoding-agent && uvicorn api.main:app --host 0.0.0.0 --port 8002) &
 
 # Wait for all background processes to complete. The script will hang here
 # until it's terminated, at which point the trap will run.

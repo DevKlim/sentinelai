@@ -484,56 +484,40 @@
         </div>
         <ul class="nav-menu">
           <li class="nav-item">
-            <a
-              href="#"
-              class="nav-link active"
-              onclick="showSection('overview', event)"
-            >
+            <a href="/" class="nav-link active">
               <i class="fas fa-tachometer-alt"></i>
               Overview
               <div class="status-indicator"></div>
             </a>
           </li>
           <li class="nav-item">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('interfaces', event)"
-            >
-              <i class="fas fa-desktop"></i>
-              Interfaces
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('analytics', event)"
-            >
-              <i class="fas fa-chart-line"></i>
-              Analytics
-            </a>
-          </li>
-          <li class="nav-item">
-            <a href="#" class="nav-link" onclick="showSection('map', event)">
-              <i class="fas fa-map-marked-alt"></i>
-              Geographic View
-            </a>
-          </li>
-          <li class="nav-item">
-            <a
-              href="#"
-              class="nav-link"
-              onclick="showSection('incidents', event)"
-            >
-              <i class="fas fa-exclamation-triangle"></i>
-              Incidents
-            </a>
-          </li>
-          <li class="nav-item">
             <a href="/dashboard/eido/manage" class="nav-link">
               <i class="fas fa-folder-open"></i>
-              EIDO Management
+              Incident Management
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/dashboard/eido/submit" class="nav-link">
+              <i class="fas fa-plus-circle"></i>
+              New Report
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/dashboard/geocoding" class="nav-link">
+              <i class="fas fa-globe-americas"></i>
+              Geocoding Agent
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/dashboard/idx/search" class="nav-link">
+              <i class="fas fa-database"></i>
+              Search IDX
+            </a>
+          </li>
+          <li class="nav-item">
+            <a href="/dashboard/eido/create" class="nav-link">
+              <i class="fas fa-drafting-compass"></i>
+              EIDO Templates
             </a>
           </li>
           <li class="nav-item">
@@ -611,168 +595,6 @@
             </div>
           </div>
         </section>
-
-        <!-- Interfaces Section -->
-        <section
-          id="interfaces"
-          class="dashboard-section"
-          style="display: none"
-        >
-          <div class="header">
-            <h2>System Interfaces</h2>
-            <p>Access all emergency response system interfaces</p>
-          </div>
-
-          <div class="interface-grid">
-            <a href="/dashboard/eido/submit" class="interface-card">
-              <div class="interface-icon">
-                <i class="fas fa-plus-circle"></i>
-              </div>
-              <div class="interface-title">Submit New Report</div>
-              <div class="interface-description">
-                Upload raw text, audio, or EIDO JSON to create a new incident
-                report.
-              </div>
-            </a>
-
-            <a href="/dashboard/idx/search" class="interface-card">
-              <div class="interface-icon">
-                <i class="fas fa-database"></i>
-              </div>
-              <div class="interface-title">Search Incidents</div>
-              <div class="interface-description">
-                Advanced search and filtering for all incident data in the
-                system.
-              </div>
-            </a>
-
-            <a
-              href="http://localhost:8000/docs"
-              target="_blank"
-              class="interface-card"
-            >
-              <div class="interface-icon">
-                <i class="fas fa-server"></i>
-              </div>
-              <div class="interface-title">EIDO Agent API</div>
-              <div class="interface-description">
-                EIDO agent API documentation and endpoints (Swagger UI).
-              </div>
-            </a>
-
-            <a
-              href="http://localhost:8001/docs"
-              target="_blank"
-              class="interface-card"
-            >
-              <div class="interface-icon">
-                <i class="fas fa-cogs"></i>
-              </div>
-              <div class="interface-title">IDX Agent API</div>
-              <div class="interface-description">
-                IDX agent API documentation and endpoints.
-              </div>
-            </a>
-
-            <a href="/dashboard/eido/create" class="interface-card">
-              <div class="interface-icon">
-                <i class="fas fa-drafting-compass"></i>
-              </div>
-              <div class="interface-title">EIDO Template Creator</div>
-              <div class="interface-description">
-                Use natural language to build new EIDO templates with AI
-                assistance.
-              </div>
-            </a>
-          </div>
-        </section>
-
-        <!-- Analytics Section -->
-        <section id="analytics" class="dashboard-section" style="display: none">
-          <div class="header">
-            <h2>Incident Analytics</h2>
-            <p>Comprehensive analysis of emergency response data</p>
-          </div>
-
-          <div class="analytics-section">
-            <div class="section-header">
-              <h3 class="section-title">Incident Trends (Last 30 Days)</h3>
-              <button class="refresh-btn" onclick="loadTrends()">
-                <i class="fas fa-sync-alt"></i> Refresh
-              </button>
-            </div>
-            <div class="chart-container">
-              <canvas id="trends-chart"></canvas>
-            </div>
-          </div>
-
-          <div class="analytics-section">
-            <div class="section-header">
-              <h3 class="section-title">Incident Type Distribution</h3>
-              <button class="refresh-btn" onclick="loadAnalytics()">
-                <i class="fas fa-sync-alt"></i> Refresh
-              </button>
-            </div>
-            <div class="chart-container">
-              <canvas id="type-chart"></canvas>
-            </div>
-          </div>
-
-          <div class="analytics-section">
-            <div class="section-header">
-              <h3 class="section-title">Response Time Analytics</h3>
-              <button class="refresh-btn" onclick="loadResponseTimes()">
-                <i class="fas fa-sync-alt"></i> Refresh
-              </button>
-            </div>
-            <div id="response-analytics" class="loading">
-              Loading response time data...
-            </div>
-          </div>
-        </section>
-
-        <!-- Map Section -->
-        <section id="map" class="dashboard-section" style="display: none">
-          <div class="header">
-            <h2>Geographic Incident Distribution</h2>
-            <p>Real-time map view of emergency incidents</p>
-          </div>
-
-          <div class="analytics-section">
-            <div class="section-header">
-              <h3 class="section-title">Incident Locations</h3>
-              <button class="refresh-btn" onclick="loadMap()">
-                <i class="fas fa-sync-alt"></i> Refresh
-              </button>
-            </div>
-            <div id="map-container" class="map-container"></div>
-          </div>
-        </section>
-
-        <!-- Incidents Section -->
-        <section id="incidents" class="dashboard-section" style="display: none">
-          <div class="header">
-            <h2>Incidents</h2>
-            <p>Current and past emergency situations</p>
-          </div>
-
-          <div class="analytics-section">
-            <div class="section-header">
-              <h3 class="section-title">Recent Incidents</h3>
-              <div class="header-actions">
-                <button class="refresh-btn" onclick="handleCreateIncident()">
-                  <i class="fas fa-plus-circle"></i> Create New Incident
-                </button>
-                <button class="refresh-btn" onclick="loadIncidents()">
-                  <i class="fas fa-sync-alt"></i> Refresh
-                </button>
-              </div>
-            </div>
-            <div id="incidents-list" class="incident-list loading">
-              Loading incidents...
-            </div>
-          </div>
-        </section>
       </main>
     </div>
 
@@ -788,36 +610,8 @@
       });
 
       function showSection(sectionId, event) {
-        // Hide all sections
-        document.querySelectorAll(".dashboard-section").forEach((section) => {
-          section.style.display = "none";
-        });
-
-        // Show selected section
-        document.getElementById(sectionId).style.display = "block";
-
-        // Update navigation
-        document.querySelectorAll(".nav-link").forEach((link) => {
-          link.classList.remove("active");
-        });
-        if (event) {
-          event.currentTarget.classList.add("active");
-        }
-
-        // Load section-specific data
-        switch (sectionId) {
-          case "analytics":
-            loadTrends();
-            loadAnalytics();
-            loadResponseTimes();
-            break;
-          case "map":
-            loadMap();
-            break;
-          case "incidents":
-            loadIncidents();
-            break;
-        }
+        // This function is now simplified as this page is only for the overview.
+        // Other pages are handled by direct navigation.
       }
 
       async function loadOverview() {
@@ -867,7 +661,7 @@
 
             statusHtml += `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 1rem; background: ${
-                          isOnline ? "#2a2a2a" : "rgba(255, 193, 7, 0.3)"
+                          isOnline ? "#2a2a2a" : "rgba(217, 83, 79, 0.3)"
                         }; border-radius: 8px; margin-bottom: 1rem;">
                             <div>
                                 <strong style="color: #ffffff;">${
@@ -879,7 +673,7 @@
                                     : "N/A"
                                 }</div>
                             </div>
-                            <div style="color: #ffffff;">
+                            <div style="color: ${isOnline ? "#5cb85c" : "#d9534f"};">
                                 <i class="fas fa-${
                                   isOnline ? "check-circle" : "times-circle"
                                 }"></i>
@@ -908,269 +702,10 @@
             "</div>";
         }
       }
-
-      async function loadTrends() {
-        try {
-          const response = await fetch("/dashboard/api/analytics/trends");
-          const data = await response.json();
-
-          if (trendsChart) {
-            trendsChart.destroy();
-          }
-
-          const ctx = document.getElementById("trends-chart").getContext("2d");
-          trendsChart = new Chart(ctx, {
-            type: "line",
-            data: {
-              labels: data.daily_counts.dates,
-              datasets: [
-                {
-                  label: "Daily Incidents",
-                  data: data.daily_counts.counts,
-                  borderColor: "#ffc107",
-                  backgroundColor: "rgba(255, 193, 7, 0.2)",
-                  tension: 0.4,
-                  fill: true,
-                },
-              ],
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  labels: {
-                    color: "#e0e0e0",
-                  },
-                },
-              },
-              scales: {
-                x: {
-                  ticks: {
-                    color: "#e0e0e0",
-                  },
-                  grid: {
-                    color: "#333333",
-                  },
-                },
-                y: {
-                  ticks: {
-                    color: "#e0e0e0",
-                  },
-                  grid: {
-                    color: "#333333",
-                  },
-                },
-              },
-            },
-          });
-        } catch (error) {
-          console.error("Error loading trends:", error);
-        }
-      }
-
-      async function loadAnalytics() {
-        try {
-          const response = await fetch("/dashboard/api/analytics/incidents");
-          const data = await response.json();
-
-          if (typeChart) {
-            typeChart.destroy();
-          }
-
-          const ctx = document.getElementById("type-chart").getContext("2d");
-          const labels = Object.keys(data.type_distribution);
-          const values = Object.values(data.type_distribution);
-
-          typeChart = new Chart(ctx, {
-            type: "doughnut",
-            data: {
-              labels: labels,
-              datasets: [
-                {
-                  data: values,
-                  backgroundColor: [
-                    "#ffc107",
-                    "#ffda6a",
-                    "#f0ad4e",
-                    "#d9534f",
-                    "#5cb85c",
-                    "#5bc0de",
-                    "#337ab7",
-                    "#777777",
-                  ],
-                },
-              ],
-            },
-            options: {
-              responsive: true,
-              maintainAspectRatio: false,
-              plugins: {
-                legend: {
-                  position: "right",
-                  labels: {
-                    color: "#e0e0e0",
-                  },
-                },
-              },
-            },
-          });
-        } catch (error) {
-          console.error("Error loading analytics:", error);
-        }
-      }
-
-      async function loadResponseTimes() {
-        try {
-          const response = await fetch(
-            "/dashboard/api/analytics/response-times"
-          );
-          const data = await response.json();
-
-          const container = document.getElementById("response-analytics");
-          container.innerHTML = `
-                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem;">
-                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.average_response_time_minutes}</div>
-                            <div style="color: #aaaaaa;">Average (minutes)</div>
-                        </div>
-                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.min_response_time_minutes}</div>
-                            <div style="color: #aaaaaa;">Fastest (minutes)</div>
-                        </div>
-                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.max_response_time_minutes}</div>
-                            <div style="color: #aaaaaa;">Slowest (minutes)</div>
-                        </div>
-                        <div style="background: #2a2a2a; padding: 1rem; border-radius: 8px; text-align: center;">
-                            <div style="font-size: 2rem; font-weight: bold; color: #ffffff;">${data.total_incidents_analyzed}</div>
-                            <div style="color: #aaaaaa;">Total Analyzed</div>
-                        </div>
-                    </div>
-                `;
-        } catch (error) {
-          console.error("Error loading response times:", error);
-        }
-      }
-
-      async function loadMap() {
-        try {
-          const response = await fetch("/dashboard/api/analytics/incidents");
-          const data = await response.json();
-
-          const container = document.getElementById("map-container");
-
-          if (!map) {
-            map = L.map(container).setView([32.7157, -117.1611], 10); // Default to San Diego
-
-            L.tileLayer(
-              "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-              {
-                attribution: "© OpenStreetMap contributors, © CartoDB",
-              }
-            ).addTo(map);
-          } else {
-            map.eachLayer((layer) => {
-              if (layer instanceof L.Marker) {
-                map.removeLayer(layer);
-              }
-            });
-          }
-
-          // Add incident markers
-          (data.incidents || []).forEach((incident) => {
-            (incident.locations || []).forEach((location) => {
-              if (Array.isArray(location) && location.length === 2) {
-                const marker = L.marker([location[0], location[1]]).addTo(map)
-                  .bindPopup(`
-                                  <strong>${incident.name || "N/A"}</strong><br>
-                                  Type: ${incident.incident_type || "N/A"}<br>
-                                  Status: ${incident.status || "N/A"}
-                              `);
-              }
-            });
-          });
-        } catch (error) {
-          console.error("Error loading map:", error);
-        }
-      }
-
-      async function loadIncidents() {
-        try {
-          const response = await fetch("/dashboard/api/analytics/incidents");
-          const data = await response.json();
-
-          const container = document.getElementById("incidents-list");
-
-          if (!data.incidents || data.incidents.length === 0) {
-            container.innerHTML =
-              '<div class="loading">No incidents found</div>';
-            return;
-          }
-
-          let incidentsHtml = "";
-          data.incidents.forEach((incident) => {
-            const status = (incident.status || "unknown").toLowerCase();
-            const statusClass =
-              status === "open" ? "status-open" : "status-closed";
-            const statusText = status.charAt(0).toUpperCase() + status.slice(1);
-
-            incidentsHtml += `
-                        <a href="/dashboard/incident/${
-                          incident.incident_id
-                        }" class="incident-item">
-                            <div class="incident-header">
-                                <span class="incident-type">${
-                                  incident.name || "Unnamed Incident"
-                                }</span>
-                                <span class="incident-status ${statusClass}">${statusText}</span>
-                            </div>
-                            <div class="incident-details">
-                                Type: ${incident.incident_type || "N/A"}<br>
-                                EIDO Reports: ${incident.report_count || 0}
-                            </div>
-                        </a>
-                    `;
-          });
-
-          container.innerHTML = incidentsHtml;
-        } catch (error) {
-          console.error("Error loading incidents:", error);
-          document.getElementById("incidents-list").innerHTML =
-            '<div class="error">Failed to load incidents.</div>';
-        }
-      }
-
-      async function handleCreateIncident() {
-        const name = prompt("Please enter a name for the new incident:");
-        if (name && name.trim()) {
-          try {
-            const response = await fetch("/dashboard/api/incidents/create", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ name: name.trim() }),
-            });
-            if (!response.ok) {
-              const err = await response.json();
-              throw new Error(err.detail || "Failed to create incident");
-            }
-            const newIncident = await response.json();
-            alert("Incident created successfully!");
-            window.location.href = `/dashboard/incident/${newIncident.incident_id}`;
-          } catch (error) {
-            alert(`Error: ${error.message}`);
-          }
-        } else if (name !== null) {
-          // User didn't cancel, but entered empty string
-          alert("Incident name cannot be empty.");
-        }
-      }
-
+      
       // Auto-refresh every 30 seconds
       setInterval(() => {
-        if (document.getElementById("overview").style.display !== "none") {
-          loadOverview();
-        }
+        loadOverview();
         checkServices();
       }, 30000);
     </script>

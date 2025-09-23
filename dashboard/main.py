@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends
+from fastapi import FastAPI, Request, HTTPException, UploadFile, File, Form, Depends, Response
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordRequestForm
@@ -50,6 +50,7 @@ templates.env.filters['tojson'] = json.dumps
 config = {
     "EIDO_API_URL": os.environ.get("EIDO_API_URL", "http://python-services:8000"),
     "IDX_API_URL": os.environ.get("IDX_API_URL", "http://python-services:8001"),
+    "GEOCODING_API_URL": os.environ.get("GEOCODING_API_URL", "http://python-services:8002"),
     "LLM_PROVIDER": os.environ.get("LLM_PROVIDER", "google"),
     "LLM_MODEL": os.environ.get("LLM_MODEL", "gemini-1.5-flash-latest"),
     "LLM_API_KEY": os.environ.get("LLM_API_KEY"),
@@ -125,6 +126,7 @@ class SettingsUpdate(BaseModel):
 class DashboardSettings(BaseModel):
     EIDO_API_URL: str
     IDX_API_URL: str
+    GEOCODING_API_URL: str
     LLM_PROVIDER: str = Field(default="google")
     LLM_MODEL: str = Field(default="gemini-1.5-flash-latest")
     LLM_API_KEY: Optional[str] = None
@@ -695,6 +697,7 @@ async def get_status():
     services = {
         "eido_api": {"url": f"{config['EIDO_API_URL']}/health", "name": "EIDO API"},
         "idx_api": {"url": f"{config['IDX_API_URL']}/health", "name": "IDX API"},
+        "geocoding_api": {"url": f"{config['GEOCODING_API_URL']}/health", "name": "Geocoding API"},
     }
     status = {}
     async with httpx.AsyncClient() as client:
@@ -791,6 +794,7 @@ async def get_dashboard_settings(current_user: User = Depends(auth.get_current_u
     return {
         "EIDO_API_URL": config["EIDO_API_URL"],
         "IDX_API_URL": config["IDX_API_URL"],
+        "GEOCODING_API_URL": config["GEOCODING_API_URL"],
         "LLM_PROVIDER": config.get("LLM_PROVIDER"),
         "LLM_MODEL": config.get("LLM_MODEL"),
         "LLM_API_KEY": masked_key
@@ -800,6 +804,7 @@ async def push_settings_to_agent(agent: str, settings_to_push: dict):
     """Helper function to push settings to a backend agent."""
     if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
     elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
+    elif agent == "geocoding": url = f"{config['GEOCODING_API_URL']}/api/v1/settings/env"
     else: return
     
     try:
@@ -818,6 +823,7 @@ async def update_dashboard_settings(
     global config
     config["EIDO_API_URL"] = new_settings.EIDO_API_URL
     config["IDX_API_URL"] = new_settings.IDX_API_URL
+    config["GEOCODING_API_URL"] = new_settings.GEOCODING_API_URL
     config["LLM_PROVIDER"] = new_settings.LLM_PROVIDER
     config["LLM_MODEL"] = new_settings.LLM_MODEL
 
@@ -851,6 +857,17 @@ async def update_dashboard_settings(
             "IDX_OPENROUTER_API_KEY": common_api_key,
         }
         await push_settings_to_agent("idx", idx_settings)
+
+        geocoding_settings = {
+            "GEOCODING_LLM_PROVIDER": common_provider,
+            "GEOCODING_GOOGLE_MODEL_NAME": common_model,
+            "GEOCODING_OPENAI_MODEL_NAME": common_model,
+            "GEOCODING_OPENROUTER_MODEL_NAME": common_model,
+            "GEOCODING_GOOGLE_API_KEY": common_api_key,
+            "GEOCODING_OPENAI_API_KEY": common_api_key,
+            "GEOCODING_OPENROUTER_API_KEY": common_api_key,
+        }
+        await push_settings_to_agent("geocoding", geocoding_settings)
         
         return {"message": "Dashboard settings updated and propagated to agents successfully."}
 
@@ -862,6 +879,7 @@ async def get_agent_settings(agent: str, current_user: User = Depends(auth.get_c
     """Gets agent settings. Requires authentication."""
     if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
     elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
+    elif agent == "geocoding": url = f"{config['GEOCODING_API_URL']}/api/v1/settings/env"
     else: raise HTTPException(status_code=404, detail="Agent not found")
     try:
         async with httpx.AsyncClient() as client:
@@ -878,6 +896,7 @@ async def update_agent_settings(
     """Updates agent settings. Requires authentication."""
     if agent == "eido": url = f"{config['EIDO_API_URL']}/api/v1/settings/env"
     elif agent == "idx": url = f"{config['IDX_API_URL']}/api/v1/settings/env"
+    elif agent == "geocoding": url = f"{config['GEOCODING_API_URL']}/api/v1/settings/env"
     else: raise HTTPException(status_code=404, detail="Agent not found")
     try:
         async with httpx.AsyncClient() as client:
@@ -1001,3 +1020,72 @@ async def update_incident_stats_proxy(incident_id: str, request: UpdateStatsRequ
         raise HTTPException(status_code=e.response.status_code, detail=f"Error from EIDO Agent: {e.response.text}")
     except Exception as e:
         raise HTTPException(status_code=502, detail=f"Could not update stats on EIDO Agent: {e}")
+
+# --- Geocoding Agent Interface and API ---
+
+@app.get("/geocoding", response_class=HTMLResponse)
+async def geocoding_page(request: Request):
+    """Serves the main page for the Geocoding Agent interface."""
+    return templates.TemplateResponse("geocoding_agent.html", {"request": request})
+
+@app.post("/api/geo/geocode", response_class=JSONResponse)
+async def geocode_proxy(request: Request):
+    """Proxies geocoding requests to the Geocoding Agent."""
+    try:
+        payload = await request.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['GEOCODING_API_URL']}/api/v1/geocode",
+                json=payload,
+                timeout=120.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from Geocoding Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not process geocoding request: {e}")
+
+@app.get("/api/geo/areas", response_class=JSONResponse)
+async def get_areas_proxy():
+    """Proxies request to get all known areas."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{config['GEOCODING_API_URL']}/api/v1/areas", timeout=30.0)
+            response.raise_for_status()
+            return JSONResponse(content=response.json())
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from Geocoding Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not get areas: {e}")
+
+@app.post("/api/geo/areas", response_class=JSONResponse)
+async def create_area_proxy(request: Request):
+    """Proxies request to create a new known area."""
+    try:
+        payload = await request.json()
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{config['GEOCODING_API_URL']}/api/v1/areas",
+                json=payload,
+                timeout=30.0
+            )
+            response.raise_for_status()
+            return JSONResponse(content=response.json(), status_code=response.status_code)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from Geocoding Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not create area: {e}")
+
+@app.delete("/api/geo/areas/{area_name}", status_code=204)
+async def delete_area_proxy(area_name: str):
+    """Proxies request to delete a known area."""
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.delete(f"{config['GEOCODING_API_URL']}/api/v1/areas/{area_name}", timeout=30.0)
+            response.raise_for_status()
+            return Response(status_code=204)
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail=f"Error from Geocoding Agent: {e.response.text}")
+    except Exception as e:
+        raise HTTPException(status_code=502, detail=f"Could not delete area: {e}")

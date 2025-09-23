@@ -32,6 +32,7 @@ RUN pip install --no-cache-dir -r requirements.python-services.txt
 # Copy application code
 COPY eido-agent /app/eido-agent
 COPY idx-agent /app/idx-agent
+COPY geocoding-agent /app/geocoding-agent
 COPY calls_processing.py /app/
 COPY run-services.sh /app/
 
@@ -73,7 +74,7 @@ RUN dos2unix run-all.sh && chmod +x run-all.sh
 RUN dos2unix run-services.sh && chmod +x run-services.sh
 
 # Expose all necessary ports
-EXPOSE 80 8080 8000 8001
+EXPOSE 80 8080 8000 8001 8002
 
 # The command to run when the container starts.
 CMD ["./run-all.sh", "web"]
