@@ -17,9 +17,9 @@ def process_text_alert(scenario_description: str, template_name: str) -> dict:
     # Step 1: Use the centralized EidoAgent to generate the EIDO.
     # This ensures the RAG logic is always applied.
     agent = get_eido_agent()
-    # FIX: Removed incorrect 'await' for a synchronous function call
-    generated_eido = agent.generate_eido_from_template_and_scenario(
-        template_name, scenario_description
+    # FIX: Called the correct agent method `generate_eido_from_scenario`.
+    generated_eido = agent.generate_eido_from_scenario(
+        event_type=template_name, scenario_description=scenario_description
     )
     
     if not generated_eido or "error" in generated_eido:

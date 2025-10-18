@@ -14,6 +14,10 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - landing
+      - dashboard
+      - python-services
     networks:
       - sds_network
 
@@ -32,10 +36,17 @@ services:
       dockerfile: Dockerfile
     container_name: dashboard
     restart: unless-stopped
+    env_file: .env
+    environment:
+      - EIDO_API_URL=http://python-services:8000
+      - IDX_API_URL=http://python-services:8001
+      - GEOCODING_API_URL=http://python-services:8002
     networks:
       - sds_network
-    ports:
-      - "8080:8080"
+    # Exposing the port is not strictly necessary as nginx accesses it via the internal network,
+    # but it can be useful for direct debugging.
+    # ports:
+    #   - "8080:8080"
 
   eido_db:
     image: postgres:15-alpine
@@ -66,15 +77,9 @@ services:
     networks:
       - sds_network
     env_file: .env
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER:-user}:${POSTGRES_PASSWORD:-password}@eido_db:5432/${POSTGRES_DB:-eido_db}
-      - EIDO_AGENT_URL=http://localhost:8000
-      - IDX_AGENT_URL=http://localhost:8001
-      - GEOCODING_AGENT_URL=http://localhost:8002
-    ports:
-      - "8000:8000"
-      - "8001:8001"
-      - "8002:8002"
+    # The DATABASE_URL in the .env file should point to `eido_db`
+    # environment:
+    #   - DATABASE_URL=... # This is now read from .env file
     depends_on:
       eido_db:
         condition: service_healthy

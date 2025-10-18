@@ -2,6 +2,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import logging
+import asyncio
 
 from api.endpoints import router as api_router
 from config.settings import settings
@@ -13,36 +14,49 @@ app = FastAPI(
     title="EIDO Agent API",
     description="API for creating, managing, and processing Emergency Incident Data Objects (EIDO).",
     version="1.0.0",
+    lifespan=None # Use startup/shutdown events instead
 )
 
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins for simplicity; restrict in production
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+async def connect_to_db_with_retries():
+    """Attempt to connect to the database with retries."""
+    retries = 5
+    delay = 3
+    for i in range(retries):
+        try:
+            logger.info(f"Attempting to initialize database (Attempt {i+1}/{retries})...")
+            create_db_engine_and_session()
+            await init_db()
+            logger.info("Database initialization successful.")
+            return
+        except Exception as e:
+            if "Name or service not known" in str(e) or "failed to connect" in str(e).lower():
+                logger.warning(f"DB connection failed (DNS/Connection Error). Retrying in {delay} seconds...")
+                await asyncio.sleep(delay)
+            else:
+                logger.critical(f"FATAL: Database initialization failed with a non-recoverable error: {e}", exc_info=True)
+                raise
+    raise RuntimeError("FATAL: Could not connect to the database after multiple retries.")
+
 @app.on_event("startup")
 async def on_startup():
     """Initializes the database when the application starts."""
-    logger.info("Application startup: Initializing database engine and session...")
+    logger.info("Application startup: Initializing database connection...")
     
-    # --- ADDED: Runtime check for required settings ---
     if not settings.database_url:
-        logger.critical("FATAL: DATABASE_URL is not set in the environment. The application cannot start without a database.")
+        logger.critical("FATAL: DATABASE_URL is not set. The application cannot start.")
         raise RuntimeError("DATABASE_URL must be set for the EIDO agent to run.")
         
-    try:
-        # This now creates the engine at the correct time, after env vars are loaded.
-        create_db_engine_and_session()
-        await init_db()
-        logger.info("Database initialized successfully.")
-    except Exception as e:
-        logger.critical(f"FATAL: Database initialization failed: {e}", exc_info=True)
-        # In a real scenario, you might want to force the app to exit if the DB fails
-        # For now, logging the critical error is sufficient.
+    await connect_to_db_with_retries()
+
 
 @app.get("/health", status_code=200, tags=["Health"])
 async def healthcheck():

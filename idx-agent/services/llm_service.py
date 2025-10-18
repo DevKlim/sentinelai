@@ -1,68 +1,72 @@
 import google.generativeai as genai
 from openai import OpenAI
 from config.settings import settings
+import json
 
 class LLMService:
-    """
-    A singleton class to manage the LLM client with lazy loading.
-    This prevents the app from crashing on startup if keys are not configured.
-    """
     def __init__(self):
-        self._client = None
-        self._provider = None
-        # Load initial provider from settings, but don't initialize client
-        self.reload()
+        self.client = None
+        self.provider = None
+        self.reload() # Initial setup
 
     def _initialize_client(self):
-        """Initializes the client based on current settings. Called on first use."""
-        print(f"IDX Agent: Lazily initializing LLM client for provider '{self._provider}'...")
-        if self._provider == 'google':
+        """Initializes the appropriate LLM client based on settings."""
+        provider = settings.llm_provider.lower()
+        self.provider = provider
+        
+        if provider == 'google':
             if not settings.google_api_key:
-                raise ValueError("GOOGLE_API_KEY is not configured for the IDX agent.")
+                print("IDX Agent Warning: GOOGLE_API_KEY is not set.")
+                return None
             genai.configure(api_key=settings.google_api_key)
             return genai.GenerativeModel(settings.google_model_name)
         
-        elif self._provider == 'openai':
+        elif provider == 'openai':
             if not settings.openai_api_key:
-                raise ValueError("OPENAI_API_KEY is not configured for the IDX agent.")
+                print("IDX Agent Warning: OPENAI_API_KEY is not set.")
+                return None
             return OpenAI(api_key=settings.openai_api_key)
 
-        elif self._provider == 'local':
+        elif provider == 'local':
             if not settings.local_llm_url:
-                raise ValueError("LOCAL_LLM_URL is not configured for the IDX agent.")
+                print("IDX Agent Warning: LOCAL_LLM_URL is not set.")
+                return None
             return OpenAI(base_url=settings.local_llm_url, api_key="not-needed")
             
         else:
-            raise ValueError(f"Unsupported LLM provider: {self._provider}")
+            print(f"IDX Agent Error: Unsupported LLM provider: {settings.llm_provider}")
+            return None
 
-    def get_client(self):
-        """Gets the initialized client, creating it if it doesn't exist."""
-        if self._client is None:
-            self._client = self._initialize_client()
-        return self._client
-        
-    def get_provider(self):
-        return self._provider
-
-    def is_configured(self):
-        """Checks if the necessary API key for the current provider is set."""
-        if self._provider == 'google':
-            return bool(settings.google_api_key)
-        if self._provider == 'openai':
-            return bool(settings.openai_api_key)
-        if self._provider == 'local':
-            return bool(settings.local_llm_url)
-        return False
+    def generate_content(self, prompt: str, is_json: bool = False) -> str:
+        """Generates text content using the configured LLM, abstracting the provider."""
+        if self.client is None:
+            raise RuntimeError(f"IDX Agent: LLM client for provider '{self.provider}' is not initialized.")
+        try:
+            if self.provider == 'google':
+                generation_config = genai.types.GenerationConfig(
+                    response_mime_type="application/json" if is_json else "text/plain",
+                    temperature=0.2
+                )
+                response = self.client.generate_content(prompt, generation_config=generation_config)
+                return response.text
+            elif self.provider in ['openai', 'local']:
+                response_format = {"type": "json_object"} if is_json else {"type": "text"}
+                response = self.client.chat.completions.create(
+                    model=settings.openai_model_name,
+                    messages=[{"role": "user", "content": prompt}],
+                    response_format=response_format,
+                    temperature=0.2,
+                )
+                return response.choices[0].message.content
+            raise NotImplementedError(f"Provider '{self.provider}' not supported.")
+        except Exception as e:
+            print(f"IDX Agent: Error during LLM content generation: {e}")
+            raise
 
     def reload(self):
-        """Resets the client, forcing re-initialization on next use. Useful after settings change."""
-        print("IDX Agent: Reloading LLM configuration.")
-        self._client = None
-        self._provider = settings.llm_provider.lower()
+        """Re-initializes the client. Useful when settings change."""
+        print("IDX Agent: Reloading LLMService client...")
+        self.client = self._initialize_client()
 
 # Singleton instance
-_llm_service_instance = LLMService()
-
-def get_llm_service():
-    """Provides access to the singleton LLM service instance."""
-    return _llm_service_instance
+llm_service = LLMService()

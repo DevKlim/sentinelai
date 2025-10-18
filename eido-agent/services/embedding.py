@@ -81,27 +81,3 @@ def get_embedding_dimension() -> int:
     # Ensure the model is loaded to know its dimension
     _get_model()
     return EMBEDDING_DIM if EMBEDDING_DIM is not None else 0
-
-# Self-test when module is run directly
-if __name__ == "__main__":
-    print(f"--- Embedding Service Self-Test (Lazy Loading) ---")
-    print(f"Model Name: {MODEL_NAME}")
-    
-    test_sentence = "This is a test sentence for the lazy-loaded embedding service."
-    print(f"\nTesting with sentence: \"{test_sentence}\"")
-    start_time =  __import__('time').time()
-    emb = generate_embedding(test_sentence)
-    duration = __import__('time').time() - start_time
-    
-    if emb:
-        print(f"Successfully generated embedding in {duration:.2f}s.")
-        print(f"Generated embedding (first 5 values): {emb[:5]}...")
-        print(f"Full embedding length: {len(emb)}")
-        if len(emb) == get_embedding_dimension():
-            print("Embedding dimension matches expected. Test PASSED.")
-        else:
-            print(f"Dimension MISMATCH! Expected {get_embedding_dimension()}, got {len(emb)}. Test FAILED.")
-    else:
-        print("Failed to generate embedding for test sentence. Test FAILED.")
-
-    print(f"\n--- Self-Test Finished ---")

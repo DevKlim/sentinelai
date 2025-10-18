@@ -121,7 +121,8 @@
       .file-input-container p {
         color: #aaaaaa;
       }
-      #file-upload {
+      #file-upload,
+      #audio-upload {
         display: none;
       }
       .btn {
@@ -194,16 +195,19 @@
         ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
       >
       <div class="header">
-        <h1>Submit Incident Report</h1>
-        <p>Generate or upload an Emergency Incident Data Object (EIDO)</p>
+        <h1>Submit EIDO Report</h1>
+        <p>Generate or upload an Emergency Incident Data Object</p>
       </div>
 
       <div class="tabs">
         <button class="tab-button active" onclick="openTab(event, 'text')">
-          From Raw Text / File
+          From Raw Text
         </button>
         <button class="tab-button" onclick="openTab(event, 'json')">
-          Upload Single EIDO JSON
+          Upload EIDO JSON
+        </button>
+        <button class="tab-button" onclick="openTab(event, 'audio')">
+          From 911 Call (Audio)
         </button>
       </div>
 
@@ -223,30 +227,16 @@
               </select>
             </div>
             <div class="form-group">
-              <label class="form-label"
-                >Upload File with One or More Incidents</label
-              >
-              <div class="file-input-container" id="drop-zone-text">
-                <input type="file" id="text-file-upload" />
-                <i class="fas fa-upload"></i>
-                <p id="file-name-text">
-                  Drag & drop any file here (it will be read as text), or click
-                  to select
-                </p>
-              </div>
-            </div>
-            <div class="form-group">
-              <label for="raw-text" class="form-label"
-                >Or Paste Single Incident Text</label
-              >
+              <label for="raw-text" class="form-label">Raw Incident Text</label>
               <textarea
                 id="raw-text"
                 class="form-textarea"
-                placeholder="Paste the raw incident report for a single incident here..."
+                placeholder="Paste or type the raw incident report here..."
+                required
               ></textarea>
             </div>
             <button type="submit" class="btn">
-              <i class="fas fa-cogs"></i> Process and Ingest
+              <i class="fas fa-cogs"></i> Generate and Ingest EIDO
             </button>
           </form>
         </div>
@@ -256,14 +246,9 @@
         <div class="form-container">
           <form id="json-form">
             <div class="form-group">
-              <label class="form-label">Upload Single EIDO JSON File</label>
+              <label class="form-label">Upload EIDO JSON File</label>
               <div class="file-input-container" id="drop-zone-json">
-                <input
-                  type="file"
-                  id="json-file-upload"
-                  accept=".json"
-                  required
-                />
+                <input type="file" id="file-upload" accept=".json" required />
                 <i class="fas fa-upload"></i>
                 <p id="file-name-json">
                   Drag & drop a file here, or click to select
@@ -274,6 +259,12 @@
               <i class="fas fa-paper-plane"></i> Ingest EIDO
             </button>
           </form>
+        </div>
+      </div>
+
+      <div id="audio" class="tab-content">
+        <div class="form-container">
+          <p>Audio processing is not yet implemented.</p>
         </div>
       </div>
 
@@ -320,76 +311,52 @@
           }
 
           showResult(JSON.stringify(result, null, 2));
-          // On success, clear the forms.
-          document.getElementById("text-form").reset();
-          document.getElementById("json-form").reset();
-          document.getElementById("file-name-text").textContent =
-            "Drag & drop any file here (it will be read as text), or click to select";
-          document.getElementById("file-name-json").textContent =
-            "Drag & drop a file here, or click to select";
         } catch (error) {
           showResult(JSON.stringify({ error: error.message }, null, 2));
         }
       }
 
-      // --- Text / File Upload Handling ---
-      const textForm = document.getElementById("text-form");
-      const textFileInput = document.getElementById("text-file-upload");
-      const textDropZone = document.getElementById("drop-zone-text");
-      const textFileNameDisplay = document.getElementById("file-name-text");
-      const rawTextArea = document.getElementById("raw-text");
-
-      textDropZone.addEventListener("click", () => textFileInput.click());
-      textFileInput.addEventListener("change", () => {
-        if (textFileInput.files.length > 0) {
-          textFileNameDisplay.textContent = textFileInput.files[0].name;
-          rawTextArea.value = ""; // Clear textarea if file is selected
-        }
-      });
-
-      textForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const templateName = document.getElementById("template-select").value;
-        const textFile =
-          textFileInput.files.length > 0 ? textFileInput.files[0] : null;
-        const rawText = rawTextArea.value;
-
-        if (textFile) {
-          await submitForm(textFile, templateName);
-        } else if (rawText.trim()) {
-          const textBlob = new Blob([rawText], { type: "text/plain" });
-          const file = new File([textBlob], "incident.txt", {
+      // Handle Text Form Submission
+      document
+        .getElementById("text-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const text = document.getElementById("raw-text").value;
+          const templateName = document.getElementById("template-select").value;
+          if (!text.trim()) {
+            alert("Please enter some incident text.");
+            return;
+          }
+          const textBlob = new Blob([text], { type: "text/plain" });
+          const textFile = new File([textBlob], "incident.txt", {
             type: "text/plain",
           });
-          await submitForm(file, templateName);
-        } else {
-          alert("Please select a file or paste some text.");
+          await submitForm(textFile, templateName);
+        });
+
+      // Handle JSON File Upload
+      const dropZoneJson = document.getElementById("drop-zone-json");
+      const fileUpload = document.getElementById("file-upload");
+      const fileNameDisplayJson = document.getElementById("file-name-json");
+
+      dropZoneJson.addEventListener("click", () => fileUpload.click());
+      fileUpload.addEventListener("change", () => {
+        if (fileUpload.files.length > 0) {
+          fileNameDisplayJson.textContent = fileUpload.files[0].name;
         }
       });
 
-      // --- JSON File Upload Handling ---
-      const jsonForm = document.getElementById("json-form");
-      const jsonFileInput = document.getElementById("json-file-upload");
-      const jsonDropZone = document.getElementById("drop-zone-json");
-      const jsonFileNameDisplay = document.getElementById("file-name-json");
-
-      jsonDropZone.addEventListener("click", () => jsonFileInput.click());
-      jsonFileInput.addEventListener("change", () => {
-        if (jsonFileInput.files.length > 0) {
-          jsonFileNameDisplay.textContent = jsonFileInput.files[0].name;
-        }
-      });
-
-      jsonForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        if (jsonFileInput.files.length === 0) {
-          alert("Please select a JSON file to upload.");
-          return;
-        }
-        const file = jsonFileInput.files[0];
-        // Template name is ignored for direct JSON uploads on the backend
-        await submitForm(file, "general_incident.json");
-      });
+      document
+        .getElementById("json-form")
+        .addEventListener("submit", async (e) => {
+          e.preventDefault();
+          if (fileUpload.files.length === 0) {
+            alert("Please select a JSON file to upload.");
+            return;
+          }
+          const file = fileUpload.files[0];
+          await submitForm(file, "default.json"); // Template name is ignored for JSON uploads
+        });
 
       function showResult(content, isLoading = false) {
         resultContainer.style.display = "block";

@@ -2,7 +2,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Settings - Sentinel AI</title>
+    <title>System Settings - Sentinel AI</title>
     <link
       href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"
       rel="stylesheet"
@@ -12,16 +12,6 @@
       rel="stylesheet"
     />
     <style>
-      :root {
-        --background: #000;
-        --surface: #1a1a1a;
-        --primary: #ffc107;
-        --text-primary: #e0e0e0;
-        --text-secondary: #ccc;
-        --border-color: #333;
-        --danger: #d9534f;
-        --success: #5cb85c;
-      }
       * {
         margin: 0;
         padding: 0;
@@ -29,52 +19,38 @@
       }
       body {
         font-family: "Inter", sans-serif;
-        background: var(--background);
-        color: var(--text-primary);
+        background: #000;
+        color: #fff;
+        line-height: 1.6;
       }
       .container {
         max-width: 900px;
         margin: 2rem auto;
         padding: 2rem;
       }
-      .back-link {
-        display: inline-flex;
-        align-items: center;
-        color: var(--text-primary);
-        text-decoration: none;
-        font-weight: 500;
-        margin-bottom: 2rem;
-        transition: all 0.3s ease;
-        padding: 0.75rem 1.5rem;
-        background: var(--surface);
-        border: 1px solid var(--border-color);
-        border-radius: 8px;
-      }
-      .back-link:hover {
-        border-color: var(--primary);
-      }
-      .back-link i {
-        margin-right: 0.5rem;
-      }
       .header {
         text-align: center;
         margin-bottom: 2rem;
       }
-      .header h1 {
+      h1 {
         font-size: 2.5rem;
-        color: var(--primary);
+        font-weight: 700;
+        color: #FFD700;
       }
-      .form-title {
-        color: var(--primary);
-        text-align: center;
+      h2 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        border-bottom: 1px solid #333;
+        padding-bottom: 0.5rem;
         margin-bottom: 1.5rem;
+        color: #FFD700;
       }
-      .settings-card,
-      .auth-container {
-        background: var(--surface);
-        border: 1px solid var(--border-color);
+      .settings-card {
+        background: #111;
+        border: 1px solid #333;
         border-radius: 12px;
         padding: 2rem;
+        margin-bottom: 2rem;
       }
       .form-group {
         margin-bottom: 1.5rem;
@@ -84,104 +60,77 @@
         font-weight: 500;
         margin-bottom: 0.5rem;
       }
-      .form-control {
+      .form-input {
         width: 100%;
         padding: 0.75rem;
-        background: #222;
-        border: 1px solid #444;
-        border-radius: 6px;
-        color: var(--text-primary);
+        border: 1px solid #333;
+        border-radius: 8px;
         font-size: 1rem;
+        background: #1a1a1a;
+        color: #fff;
       }
-      .form-control:focus {
+      .form-input:focus {
         outline: none;
-        border-color: var(--primary);
+        border-color: #FFD700;
       }
       .btn {
-        padding: 0.75rem 1.5rem;
-        border-radius: 6px;
-        cursor: pointer;
-        font-weight: 500;
-        border: 1px solid transparent;
-        transition: background-color 0.2s ease;
-      }
-      .btn-primary {
-        background: var(--primary);
-        color: #000;
-        border-color: var(--primary);
-        width: 100%;
-      }
-      .btn-primary:hover {
-        background: #ffda6a;
-      }
-      .user-info {
-        display: flex;
-        justify-content: space-between;
+        display: inline-flex;
         align-items: center;
-        background: #222;
+        justify-content: center;
+        padding: 0.75rem 1.5rem;
+        border-radius: 8px;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        background: #FFD700;
+        color: #000;
+        border: 1px solid #FFD700;
+      }
+      .btn:hover {
+        background: #ffd700b3;
+      }
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 2rem;
+        transition: all 0.3s ease;
+        padding: 0.75rem 1.5rem;
+        background: #111;
+        border: 1px solid #333;
+        border-radius: 8px;
+      }
+      .back-link:hover {
+        border-color: #FFD700;
+      }
+      .back-link i {
+        margin-right: 0.5rem;
+      }
+      .response-message {
+        display: none;
+        margin-top: 1rem;
         padding: 1rem;
         border-radius: 8px;
-        margin-bottom: 2rem;
       }
-      #logout-btn {
-        background: var(--danger);
+      .response-message.success {
+        background: #28a745;
         color: #fff;
       }
-      .auth-container {
-        max-width: 400px;
-        margin: 4rem auto;
-      }
-      .auth-toggle {
-        text-align: center;
-        margin-top: 1.5rem;
-      }
-      .auth-toggle a {
-        color: var(--primary);
-        cursor: pointer;
-        text-decoration: underline;
-      }
-      .toast {
-        position: fixed;
-        bottom: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #222;
+      .response-message.error {
+        background: #dc3545;
         color: #fff;
-        padding: 1rem 2rem;
-        border-radius: 8px;
-        z-index: 1000;
-        opacity: 0;
-        transition: opacity 0.3s ease;
-        pointer-events: none;
       }
-      .toast.show {
-        opacity: 1;
-      }
-      .toast.success {
-        background: var(--success);
-      }
-      .toast.error {
-        background: var(--danger);
-      }
-      .form-text {
-        font-size: 0.875rem;
-        color: var(--text-secondary);
-        margin-top: 0.5rem;
-        display: block;
-      }
-      /* Toggle Switch CSS */
-      .toggle-switch-wrapper {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-      }
-      .toggle-switch {
+      /* Toggle Switch */
+      .switch {
         position: relative;
         display: inline-block;
         width: 60px;
         height: 34px;
       }
-      .toggle-switch input {
+      .switch input {
         opacity: 0;
         width: 0;
         height: 0;
@@ -193,8 +142,9 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: #444;
+        background-color: #ccc;
         transition: 0.4s;
+        border-radius: 34px;
       }
       .slider:before {
         position: absolute;
@@ -205,434 +155,275 @@
         bottom: 4px;
         background-color: white;
         transition: 0.4s;
+        border-radius: 50%;
       }
       input:checked + .slider {
-        background-color: var(--success);
+        background-color: #FFD700;
       }
       input:checked + .slider:before {
         transform: translateX(26px);
       }
-      .slider.round {
-        border-radius: 34px;
-      }
-      .slider.round:before {
-        border-radius: 50%;
-      }
-      .status-indicator {
-        font-weight: 500;
-      }
-      .status-indicator.active {
-        color: var(--success);
-      }
-      .status-indicator.inactive {
-        color: var(--danger);
-      }
     </style>
   </head>
   <body>
-    <div class="container" id="app-container">
-      <!-- Auth View (Login/Register) -->
-      <div id="auth-view" style="display: none">
-        <div class="auth-container" id="login-container">
-          <h2 class="form-title">Login to Settings</h2>
-          <form id="login-form">
-            <div class="form-group">
-              <label for="login-username" class="form-label">Username</label>
-              <input
-                type="text"
-                id="login-username"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="login-password" class="form-label">Password</label>
-              <input
-                type="password"
-                id="login-password"
-                class="form-control"
-                required
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">Login</button>
-          </form>
-          <div class="auth-toggle">
-            <p>
-              No account?
-              <a onclick="toggleAuthView('register')">Register here</a>.
-            </p>
-          </div>
-        </div>
-        <div
-          class="auth-container"
-          id="register-container"
-          style="display: none"
-        >
-          <h2 class="form-title">Create Account</h2>
-          <form id="register-form">
-            <div class="form-group">
-              <label for="register-username" class="form-label">Username</label>
-              <input
-                type="text"
-                id="register-username"
-                class="form-control"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label for="register-password" class="form-label">Password</label>
-              <input
-                type="password"
-                id="register-password"
-                class="form-control"
-                required
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">Register</button>
-          </form>
-          <div class="auth-toggle">
-            <p>
-              Already have an account?
-              <a onclick="toggleAuthView('login')">Login here</a>.
-            </p>
-          </div>
-        </div>
+    <div class="container">
+      <a href="/dashboard/" class="back-link"
+        ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
+      >
+      <div class="header">
+        <h1>System Settings</h1>
       </div>
 
-      <!-- Settings View (Protected) -->
-      <div id="settings-view" style="display: none">
-        <a href="/dashboard/" class="back-link"
-          ><i class="fas fa-arrow-left"></i> Back to Dashboard</a
-        >
-        <div class="header">
-          <h1>Settings</h1>
-          <p>
-            Configure API endpoints and LLM provider settings for all services.
+      <!-- Geocoding Agent Settings -->
+      <div class="settings-card">
+        <h2><i class="fas fa-map-marked-alt"></i> Geocoding Agent</h2>
+        <form id="geo-settings-form">
+          <h3>Environment Variables</h3>
+          <p style="color: #ccc; margin-bottom: 1rem">
+            Changes to LLM provider or keys are applied immediately by the agent.
           </p>
-        </div>
+          <!-- Fields will be populated by JS -->
+          <button type="submit" class="btn">Save Geocoding Settings</button>
+          <div
+            id="geo-response"
+            class="response-message"
+            style="margin-top: 1rem"
+          ></div>
+        </form>
+      </div>
 
-        <div class="user-info">
-          <span>Logged in as: <strong id="username-display"></strong></span>
-          <button class="btn" id="logout-btn">Logout</button>
-        </div>
-
-        <div class="settings-card">
-          <form id="settings-form">
-            <h3
-              class="form-title"
-              style="text-align: left; margin-bottom: 2rem"
-            >
-              Dashboard & Agent Settings
-            </h3>
-            <div class="form-group">
-              <label for="eido-api-url" class="form-label"
-                >EIDO Agent API URL</label
-              >
-              <input type="text" id="eido-api-url" class="form-control" />
-            </div>
-            <div class="form-group">
-              <label for="idx-api-url" class="form-label"
-                >IDX Agent API URL</label
-              >
-              <input type="text" id="idx-api-url" class="form-control" />
-            </div>
-            <div class="form-group">
-              <label for="geocoding-api-url" class="form-label"
-                >Geocoding Agent API URL</label
-              >
-              <input type="text" id="geocoding-api-url" class="form-control" />
-            </div>
-            <hr style="border-color: #333; margin: 2rem 0" />
-            <div class="form-group">
-              <label for="llm-provider" class="form-label">LLM Provider</label>
-              <select id="llm-provider" class="form-control">
-                <option value="google">Google</option>
-                <option value="openai">OpenAI</option>
-                <option value="openrouter">OpenRouter</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label for="llm-model" class="form-label">LLM Model Name</label>
-              <input
-                type="text"
-                id="llm-model"
-                class="form-control"
-                placeholder="e.g., gemini-1.5-flash-latest or gpt-4o"
-              />
-            </div>
-            <div class="form-group">
-              <label for="llm-api-key" class="form-label"
-                >API Key (leave unchanged to keep existing key)</label
-              >
-              <input
-                type="password"
-                id="llm-api-key"
-                class="form-control"
-                placeholder="Enter new key here"
-              />
-            </div>
-            <button type="submit" class="btn btn-primary" style="width: auto">
-              Save Settings
-            </button>
-          </form>
-
-          <hr style="border-color: #333; margin: 2rem 0" />
-          <h3 class="form-title" style="text-align: left; margin-bottom: 2rem">
-            IDX Agent Settings
-          </h3>
-          <div class="form-group">
-            <label class="form-label">Automatic Incident Categorizer</label>
-            <div class="toggle-switch-wrapper">
-              <label class="toggle-switch">
-                <input type="checkbox" id="categorizer-toggle" />
-                <span class="slider round"></span>
-              </label>
-              <span id="categorizer-status" class="status-indicator"
-                >Fetching status...</span
-              >
-            </div>
-            <small class="form-text"
-              >When enabled, the IDX agent will automatically try to match
-              uncategorized EIDO reports to existing incidents.</small
-            >
+      <!-- IDX Agent Settings -->
+      <div class="settings-card">
+        <h2><i class="fas fa-cogs"></i> IDX Agent</h2>
+        <div id="idx-categorizer-control">
+          <h3>Incident Categorizer Routine</h3>
+          <p>
+            Automatically categorizes new EIDO reports into existing or new
+            incidents.
+          </p>
+          <div
+            style="
+              display: flex;
+              align-items: center;
+              gap: 1rem;
+              margin-top: 1rem;
+            "
+          >
+            <label class="switch">
+              <input type="checkbox" id="categorizer-toggle" />
+              <span class="slider"></span>
+            </label>
+            <span id="categorizer-status-text">Status: Loading...</span>
           </div>
         </div>
+        <hr style="border-color: #333; margin: 2rem 0" />
+        <form id="idx-settings-form">
+          <h3>Environment Variables</h3>
+          <p style="color: #ccc; margin-bottom: 1rem">
+            Changes to LLM provider or keys are applied immediately by the agent.
+          </p>
+          <!-- Fields will be populated by JS -->
+          <button type="submit" class="btn">Save IDX Settings</button>
+          <div
+            id="idx-response"
+            class="response-message"
+            style="margin-top: 1rem"
+          ></div>
+        </form>
+      </div>
+
+      <!-- EIDO Agent Settings -->
+      <div class="settings-card">
+        <h2><i class="fas fa-robot"></i> EIDO Agent</h2>
+        <form id="eido-settings-form">
+          <h3>Environment Variables</h3>
+          <p style="color: #ccc; margin-bottom: 1rem">
+            Changes to LLM provider or keys are applied immediately by the agent.
+          </p>
+          <!-- Fields will be populated by JS -->
+          <button type="submit" class="btn">Save EIDO Settings</button>
+          <div
+            id="eido-response"
+            class="response-message"
+            style="margin-top: 1rem"
+          ></div>
+        </form>
       </div>
     </div>
-    <div id="toast" class="toast"></div>
 
     <script>
-      const authView = document.getElementById("auth-view");
-      const settingsView = document.getElementById("settings-view");
-      const loginContainer = document.getElementById("login-container");
-      const registerContainer = document.getElementById("register-container");
-
-      const getToken = () => sessionStorage.getItem("accessToken");
-      const setToken = (token) => sessionStorage.setItem("accessToken", token);
-      const removeToken = () => sessionStorage.removeItem("accessToken");
-
-      function toggleAuthView(view) {
-        if (view === "register") {
-          loginContainer.style.display = "none";
-          registerContainer.style.display = "block";
-        } else {
-          loginContainer.style.display = "block";
-          registerContainer.style.display = "none";
+      document.addEventListener("DOMContentLoaded", () => {
+        // NOTE: A real login flow would be required to get and store this token.
+        // For testing, you can obtain a token from the /dashboard/token endpoint
+        // using an API client and then set it in your browser's developer console:
+        // localStorage.setItem('sentinelai_token', 'your_jwt_token_here');
+        const token = localStorage.getItem("sentinelai_token");
+        if (!token) {
+          // In a real application, you would redirect to a login page.
+          // For now, we'll show an alert and let the API calls fail.
+          alert("Authentication token not found. Please log in to manage settings.");
         }
-      }
 
-      function showView(view) {
-        if (view === "settings") {
-          authView.style.display = "none";
-          settingsView.style.display = "block";
-        } else {
-          authView.style.display = "block";
-          settingsView.style.display = "none";
-          toggleAuthView("login");
-        }
-      }
+        loadCategorizerStatus();
+        loadSettings("idx");
+        loadSettings("eido");
+        loadSettings("geo"); // Load settings for the new Geocoding Agent
 
-      let toastTimeout;
-      function showToast(message, type = "info") {
-        const toast = document.getElementById("toast");
-        toast.textContent = message;
-        toast.className = `toast show ${type}`;
-        clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
-      }
-
-      async function apiFetch(url, options = {}) {
-        const token = getToken();
-        const headers = { ...options.headers };
-        if (token) {
-          headers["Authorization"] = `Bearer ${token}`;
-        }
-        const response = await fetch(url, { ...options, headers });
-        if (response.status === 401) {
-          removeToken();
-          showView("auth");
-          showToast("Session expired. Please log in again.", "error");
-          throw new Error("Unauthorized");
-        }
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.detail || "An API error occurred");
-        }
-        return response.json();
-      }
-
-      async function fetchAndDisplayCategorizerStatus() {
-        const statusEl = document.getElementById("categorizer-status");
-        const toggleEl = document.getElementById("categorizer-toggle");
-        try {
-          const data = await apiFetch(
-            "/dashboard/api/settings/idx/categorizer/status"
-          );
-          toggleEl.checked = data.enabled;
-          statusEl.textContent = data.enabled ? "Active" : "Inactive";
-          statusEl.className = data.enabled
-            ? "status-indicator active"
-            : "status-indicator inactive";
-        } catch (error) {
-          console.error("Failed to fetch categorizer status:", error);
-          statusEl.textContent = "Error";
-          statusEl.className = "status-indicator inactive";
-          if (error.message !== "Unauthorized") {
-            showToast("Could not fetch categorizer status.", "error");
-          }
-        }
-      }
-
-      async function fetchAndDisplaySettings() {
-        try {
-          const settings = await apiFetch("/dashboard/api/settings/dashboard");
-          document.getElementById("eido-api-url").value = settings.EIDO_API_URL;
-          document.getElementById("idx-api-url").value = settings.IDX_API_URL;
-          document.getElementById("geocoding-api-url").value = settings.GEOCODING_API_URL;
-          document.getElementById("llm-provider").value = settings.LLM_PROVIDER;
-          document.getElementById("llm-model").value = settings.LLM_MODEL;
-          // Also fetch the categorizer status
-          await fetchAndDisplayCategorizerStatus();
-        } catch (error) {
-          console.error("Failed to fetch settings:", error);
-          if (error.message !== "Unauthorized") {
-            showToast(error.message, "error");
-          }
-        }
-      }
-
-      async function checkAuthStatus() {
-        if (!getToken()) {
-          showView("auth");
-          return;
-        }
-        try {
-          const user = await apiFetch("/dashboard/users/me");
-          document.getElementById("username-display").textContent =
-            user.username;
-          showView("settings");
-          await fetchAndDisplaySettings();
-        } catch (error) {
-          console.error("Auth check failed:", error);
-          showView("auth");
-        }
-      }
-
-      // --- Event Listeners ---
-      document
-        .getElementById("login-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const username = document.getElementById("login-username").value;
-          const password = document.getElementById("login-password").value;
-          const formData = new URLSearchParams();
-          formData.append("username", username);
-          formData.append("password", password);
-
-          try {
-            const response = await fetch("/dashboard/token", {
-              method: "POST",
-              body: formData,
-            });
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.detail);
-            }
-            const data = await response.json();
-            setToken(data.access_token);
-            await checkAuthStatus();
-          } catch (error) {
-            showToast(`Login failed: ${error.message}`, "error");
-          }
-        });
-
-      document
-        .getElementById("register-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const username = document.getElementById("register-username").value;
-          const password = document.getElementById("register-password").value;
-          try {
-            const response = await fetch("/dashboard/users/register", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ username, password }),
-            });
-            if (!response.ok) {
-              const error = await response.json();
-              throw new Error(error.detail);
-            }
-            showToast("Registration successful! Please log in.", "success");
-            toggleAuthView("login");
-            document.getElementById("login-username").value = username;
-            document.getElementById("login-password").focus();
-          } catch (error) {
-            showToast(`Registration failed: ${error.message}`, "error");
-          }
-        });
-
-      document.getElementById("logout-btn").addEventListener("click", () => {
-        removeToken();
-        showView("auth");
-        showToast("You have been logged out.", "success");
+        document
+          .getElementById("categorizer-toggle")
+          .addEventListener("change", handleToggleCategorizer);
+        document
+          .getElementById("idx-settings-form")
+          .addEventListener("submit", (e) => handleSaveSettings(e, "idx"));
+        document
+          .getElementById("eido-settings-form")
+          .addEventListener("submit", (e) => handleSaveSettings(e, "eido"));
+        document
+          .getElementById("geo-settings-form")
+          .addEventListener("submit", (e) => handleSaveSettings(e, "geo")); // Add event listener for Geocoding Agent
       });
 
-      document
-        .getElementById("settings-form")
-        .addEventListener("submit", async (e) => {
-          e.preventDefault();
-          const settingsData = {
-            EIDO_API_URL: document.getElementById("eido-api-url").value,
-            IDX_API_URL: document.getElementById("idx-api-url").value,
-            GEOCODING_API_URL: document.getElementById("geocoding-api-url").value,
-            LLM_PROVIDER: document.getElementById("llm-provider").value,
-            LLM_MODEL: document.getElementById("llm-model").value,
-            LLM_API_KEY:
-              document.getElementById("llm-api-key").value || "********",
-          };
+      function createFormFields(formId, settings) {
+        const form = document.getElementById(formId);
+        // Clear previous fields, keeping the H3, P, button and response div.
+        const elementsToKeep = new Set(form.querySelectorAll("h3, p, button, .response-message"));
+        Array.from(form.childNodes).forEach(node => {
+            if (node.nodeType === Node.ELEMENT_NODE && !elementsToKeep.has(node)) {
+                form.removeChild(node);
+            }
+        });
 
-          try {
-            const result = await apiFetch("/dashboard/api/settings/dashboard", {
+        const fragment = document.createDocumentFragment();
+        Object.entries(settings).forEach(([key, value]) => {
+          if (key === "error") return;
+          const group = document.createElement("div");
+          group.className = "form-group";
+
+          const label = document.createElement("label");
+          label.className = "form-label";
+          label.setAttribute("for", `${formId}-${key}`);
+          label.textContent = key;
+
+          const input = document.createElement("input");
+          input.className = "form-input";
+          input.id = `${formId}-${key}`;
+          input.name = key;
+          input.type = key.includes("API_KEY") ? "password" : "text";
+          input.value = value;
+
+          group.appendChild(label);
+          group.appendChild(input);
+          fragment.appendChild(group);
+        });
+        // Insert fields before the submit button
+        form.insertBefore(fragment, form.querySelector("button"));
+      }
+
+      async function getAuthHeaders() {
+          const token = localStorage.getItem("sentinelai_token");
+          if (!token) {
+              return {};
+          }
+          return { 'Authorization': `Bearer ${token}` };
+      }
+
+      async function loadSettings(agent) {
+        try {
+          const headers = await getAuthHeaders();
+          const response = await fetch(`/dashboard/api/settings/${agent}`, { headers });
+          if (response.status === 401) throw new Error("Unauthorized. Please log in.");
+          if (!response.ok) throw new Error("Failed to load settings.");
+          const settings = await response.json();
+          createFormFields(`${agent}-settings-form`, settings);
+        } catch (error) {
+          const responseDiv = document.getElementById(`${agent}-response`);
+          showResponseMessage(responseDiv, error.message, "error");
+        }
+      }
+
+      async function handleSaveSettings(event, agent) {
+        event.preventDefault();
+        const form = event.target;
+        const formData = new FormData(form);
+        const settings = Object.fromEntries(formData.entries());
+
+        const responseDiv = document.getElementById(`${agent}-response`);
+        try {
+          const headers = await getAuthHeaders();
+          headers['Content-Type'] = 'application/json';
+          const response = await fetch(`/dashboard/api/settings/${agent}`, {
+            method: "POST",
+            headers: headers,
+            body: JSON.stringify({ settings }),
+          });
+          const result = await response.json();
+          if (response.status === 401) throw new Error("Unauthorized. Please log in.");
+          if (!response.ok) throw new Error(result.detail || "Save failed.");
+
+          showResponseMessage(
+            responseDiv,
+            result.message || "Settings saved successfully!",
+            "success"
+          );
+        } catch (error) {
+          showResponseMessage(responseDiv, error.message, "error");
+        }
+      }
+
+      async function loadCategorizerStatus() {
+        try {
+          const headers = await getAuthHeaders();
+          const response = await fetch("/dashboard/api/settings/idx/categorizer/status", { headers });
+          if (response.status === 401) throw new Error("Unauthorized");
+          if (!response.ok) throw new Error("Failed to get status.");
+          const data = await response.json();
+          updateCategorizerUI(data);
+        } catch (error) {
+          console.error("Error loading categorizer status:", error);
+          document.getElementById("categorizer-status-text").textContent =
+            `Status: Error (${error.message})`;
+        }
+      }
+
+      async function handleToggleCategorizer(event) {
+        const enable = event.target.checked;
+        try {
+          const headers = await getAuthHeaders();
+          headers['Content-Type'] = 'application/json';
+          const response = await fetch(
+            "/dashboard/api/settings/idx/categorizer/toggle",
+            {
               method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(settingsData),
-            });
-            showToast(result.message, "success");
-            document.getElementById("llm-api-key").value = ""; // Clear password field
-          } catch (error) {
-            showToast(`Failed to save settings: ${error.message}`, "error");
-          }
-        });
+              headers: headers,
+              body: JSON.stringify({ enable }),
+            }
+          );
+          if (response.status === 401) throw new Error("Unauthorized");
+          if (!response.ok) throw new Error("Failed to toggle categorizer.");
+          const data = await response.json();
+          updateCategorizerUI(data.new_state);
+        } catch (error) {
+          alert(`Error: ${error.message}`);
+          event.target.checked = !enable; // Revert toggle on error
+        }
+      }
 
-      document
-        .getElementById("categorizer-toggle")
-        .addEventListener("change", async (e) => {
-          const isEnabled = e.target.checked;
-          const statusEl = document.getElementById("categorizer-status");
-          statusEl.textContent = "Updating...";
-          statusEl.className = "status-indicator";
-          try {
-            const result = await apiFetch(
-              "/dashboard/api/settings/idx/categorizer/toggle",
-              {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ enable: isEnabled }),
-              }
-            );
-            showToast(result.message, "success");
-            await fetchAndDisplayCategorizerStatus(); // Refresh status from source
-          } catch (error) {
-            showToast(
-              `Failed to toggle categorizer: ${error.message}`,
-              "error"
-            );
-            await fetchAndDisplayCategorizerStatus(); // Revert to actual state
-          }
-        });
+      function updateCategorizerUI(data) {
+        const toggle = document.getElementById("categorizer-toggle");
+        const statusText = document.getElementById("categorizer-status-text");
+        toggle.checked = data.enabled;
+        const status = data.enabled ? `Enabled (${data.status})` : "Disabled";
+        statusText.textContent = `Status: ${status}`;
+      }
 
-      // --- Initial Load ---
-      document.addEventListener("DOMContentLoaded", checkAuthStatus);
+      function showResponseMessage(element, message, type) {
+        element.textContent = message;
+        element.className = `response-message ${type}`;
+        element.style.display = "block";
+        setTimeout(() => {
+          element.style.display = "none";
+        }, 5000);
+      }
     </script>
   </body>
 </html>

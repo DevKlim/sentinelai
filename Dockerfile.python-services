@@ -1,39 +1,30 @@
 # sentinelai/Dockerfile.python-services
-# sdsc-orchestrator/Dockerfile.python-services
 # Base image
 FROM python:3.10-slim
 
 # Set working directory
 WORKDIR /app
 
-# Install system dependencies, ADDING ca-certificates and openssl.
+# Install system dependencies like tesseract for OCR, used by other services
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    ca-certificates \
-    openssl \
     tesseract-ocr \
-    dos2unix \
-    build-essential \
-    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install Python dependencies
+# Copy the master requirements file and install all Python dependencies
 COPY requirements.python-services.txt .
 RUN pip install --no-cache-dir -r requirements.python-services.txt
 
-# Copy application code for both agents
-COPY eido-agent /app/eido-agent
-COPY idx-agent /app/idx-agent
+# Copy application code for each Python service
+COPY eido_agent /app/eido_agent
+COPY idx_agent /app/idx_agent
+COPY geocoding_agent /app/geocoding_agent
 
-# --- FIX: Run the RAG indexer during the build ---
-# This creates the eido_schema_index.json file inside the image.
-RUN python /app/eido-agent/utils/rag_indexer.py
+# Expose ports for all services
+EXPOSE 8000 8001 8002
 
-# Expose ports for the two API services
-EXPOSE 8000 8001
-
-# Copy the run script, fix its line endings, and make it executable
+# Copy the script to run all services and make it executable
 COPY run-services.sh /app/
-RUN dos2unix /app/run-services.sh && chmod +x /app/run-services.sh
+RUN chmod +x /app/run-services.sh
 
-# Command to run the script
+# The command to run when the container starts.
 CMD ["/app/run-services.sh"]

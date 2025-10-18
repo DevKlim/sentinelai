@@ -1,135 +1,177 @@
 import json
 import logging
-from typing import Optional
+from typing import Optional, List, Dict, Any
 
 import google.generativeai as genai
 from openai import OpenAI
 
 from config.settings import settings
-from services.area_store import area_store
-from models.schemas import GeocodeResponse
+from models.schemas import GeocodeResponse, AgentStep
 
 logger = logging.getLogger(__name__)
+
+def _safe_json_loads(text: str) -> Optional[Dict[str, Any]]:
+    """Safely loads JSON from a string, stripping markdown and handling errors."""
+    try:
+        clean_text = text.strip().replace("```json", "").replace("```", "").strip()
+        return json.loads(clean_text)
+    except (json.JSONDecodeError, TypeError):
+        logger.warning(f"Could not decode JSON from LLM response: {text}")
+        return None
 
 class GeocodingLLMInterface:
     def __init__(self):
         self.provider = settings.llm_provider.lower()
-        self.client = None
-        logger.info(f"Geocoding Agent: LLMInterface created for provider: {self.provider}.")
-
-    def _get_client(self):
-        if self.client is None:
-            self.client = self._initialize_client()
-        return self.client
+        self.client = self._initialize_client()
+        logger.info(f"Geocoding Agent: LLMInterface initialized for provider: {self.provider}.")
 
     def _initialize_client(self):
-        if self.provider == 'google':
-            if not settings.google_api_key: return None
-            genai.configure(api_key=settings.google_api_key)
-            return genai.GenerativeModel(settings.google_model_name)
-        elif self.provider == 'openai' or self.provider == 'openrouter':
-            api_key = settings.openrouter_api_key if self.provider == 'openrouter' else settings.openai_api_key
-            if not api_key: return None
-            base_url = "https://openrouter.ai/api/v1" if self.provider == 'openrouter' else None
-            return OpenAI(api_key=api_key, base_url=base_url)
-        return None
-
-    def _generate_content(self, prompt: str) -> str:
-        client = self._get_client()
-        if not client:
-            raise RuntimeError(f"Geocoding Agent: LLM client for provider '{self.provider}' could not be initialized.")
-        
         try:
             if self.provider == 'google':
-                response = client.generate_content(prompt)
+                if not settings.google_api_key:
+                    logger.error("GEOCODING_GOOGLE_API_KEY is not set.")
+                    return None
+                genai.configure(api_key=settings.google_api_key)
+                return genai.GenerativeModel(settings.google_model_name)
+            elif self.provider in ['openai', 'openrouter']:
+                api_key = settings.openrouter_api_key if self.provider == 'openrouter' else settings.openai_api_key
+                if not api_key:
+                    logger.error(f"API key for {self.provider} is not set.")
+                    return None
+                base_url = "https://openrouter.ai/api/v1" if self.provider == 'openrouter' else None
+                return OpenAI(api_key=api_key, base_url=base_url)
+        except Exception as e:
+            logger.error(f"Failed to initialize LLM client for {self.provider}: {e}")
+        return None
+
+    def _generate_content(self, prompt: str, is_json: bool = False) -> str:
+        if not self.client:
+            raise RuntimeError(f"LLM client for '{self.provider}' is not initialized. Check API keys and configuration.")
+        try:
+            if self.provider == 'google':
+                generation_config = {"response_mime_type": "application/json"} if is_json else None
+                response = self.client.generate_content(prompt, generation_config=generation_config)
                 return response.text
-            elif self.provider == 'openai' or self.provider == 'openrouter':
+            elif self.provider in ['openai', 'openrouter']:
                 model = settings.openai_model_name
-                response = client.chat.completions.create(
+                response_format = {"type": "json_object"} if is_json else {"type": "text"}
+                response = self.client.chat.completions.create(
                     model=model,
                     messages=[{"role": "user", "content": prompt}],
+                    response_format=response_format
                 )
                 return response.choices[0].message.content
-            raise NotImplementedError(f"Provider '{self.provider}' not implemented.")
+            raise NotImplementedError(f"Provider '{self.provider}' not supported.")
         except Exception as e:
-            logger.error(f"Error during LLM content generation: {e}")
-            raise RuntimeError(f"Could not get response from LLM: {e}")
+            logger.error(f"LLM content generation failed: {e}")
+            raise
 
-    def geocode_with_llm(self, text_description: str) -> Optional[GeocodeResponse]:
+    def brainstorm_location_plan(self, description: str) -> Dict:
         prompt = f"""
-You are a precision geocoding expert AI. Your task is to analyze a text description of a location and determine its most likely geographic coordinates (latitude and longitude). The description may be vague, contain landmarks, or be a standard address.
+        You are an AI assistant for emergency dispatch. Your task is to analyze a user's location description and break it down into searchable components.
+        The user is located at or near **UC San Diego**.
 
-**Instructions:**
-1.  Read the "Location Description" carefully.
-2.  Synthesize all clues to pinpoint the most probable location.
-3.  Provide a confidence score between 0.0 (no confidence) and 1.0 (certainty).
-4.  Briefly explain your reasoning.
-5.  Your response MUST be ONLY a single, valid JSON object with the following keys: "latitude", "longitude", "confidence", "reasoning". Do not include any other text or markdown.
+        User Description: "{description}"
 
-**Location Description:**
----
-{text_description}
----
+        Based on this, generate a JSON object with:
+        1. `search_queries`: A list of 2-3 concise Google Maps search queries to find this location.
+        2. `key_landmarks`: A list of keywords representing physical landmarks mentioned or implied.
 
-**JSON Output Format:**
-{{
-  "latitude": <float>,
-  "longitude": <float>,
-  "confidence": <float between 0.0 and 1.0>,
-  "reasoning": "<string>"
-}}
-"""
-        response_text = ""
-        try:
-            response_text = self._generate_content(prompt)
-            clean_response = response_text.strip().replace("```json", "").replace("```", "").strip()
-            data = json.loads(clean_response)
-            return GeocodeResponse(
-                latitude=data['latitude'],
-                longitude=data['longitude'],
-                confidence=data['confidence'],
-                reasoning=data['reasoning'],
-                source="llm-geocoded"
-            )
-        except (json.JSONDecodeError, KeyError, Exception) as e:
-            logger.error(f"Failed to geocode with LLM. Error: {e}. Raw response: {response_text}")
-            return None
+        Your response must be only a valid JSON object.
+        """
+        response_text = self._generate_content(prompt, is_json=True)
+        plan = _safe_json_loads(response_text)
+        if not plan or "search_queries" not in plan:
+            raise ValueError("LLM failed to generate a valid brainstorm plan.")
+        return plan
+
+    def simulate_web_search(self, query: str) -> str:
+        prompt = f"""
+        You are a search engine simulator. Given a search query, provide a concise, one-sentence summary of the top result, focusing on location details, address, or defining features relevant to finding it.
+        Assume the search is centered around **UC San Diego**.
+
+        Search Query: "{query}"
+
+        Simulated one-sentence summary:
+        """
+        return self._generate_content(prompt)
+
+    def synthesize_and_geocode(self, original_desc: str, context: str) -> Dict:
+        prompt = f"""
+        You are a precision geocoding expert. Your task is to synthesize all available information to determine the most likely geographic coordinates (latitude and longitude).
+
+        **Contextual Information:**
+        ---
+        {context}
+        ---
+
+        **Original User Description:** "{original_desc}"
+
+        **Instructions:**
+        1. Analyze all information to pinpoint the most probable location.
+        2. Your response MUST be ONLY a single, valid JSON object with the following keys:
+           - "latitude": <float>
+           - "longitude": <float>
+           - "confidence": <float between 0.0 and 1.0>
+           - "reasoning": "<string, a brief explanation of your conclusion>"
+        """
+        response_text = self._generate_content(prompt, is_json=True)
+        result = _safe_json_loads(response_text)
+        if not result or "latitude" not in result:
+            raise ValueError("LLM failed to generate valid geocoding synthesis.")
+        return result
 
 class GeocodingAgent:
     def __init__(self):
         self.llm_interface = GeocodingLLMInterface()
 
-    def _normalize(self, text: str) -> str:
-        return text.strip().lower()
-
     def geocode(self, text_description: str) -> Optional[GeocodeResponse]:
-        # Step 1: Preprocessing and Area Search
-        found_area = None
-        norm_desc = self._normalize(text_description)
-        for area in area_store.get_all_areas():
-            if self._normalize(area.name) in norm_desc:
-                found_area = area
-                break
-            if any(self._normalize(alias) in norm_desc for alias in area.aliases):
-                found_area = area
-                break
-        
-        # Step 2: Context Assembly
-        enriched_description = text_description
-        if found_area:
-            logger.info(f"Found matching area: '{found_area.name}'. Enriching context for LLM.")
-            context_clues = "; ".join(found_area.context_clues)
-            enriched_description = (
-                f"The location is likely within or near the '{found_area.name}' area "
-                f"(approx. coordinates: {found_area.latitude}, {found_area.longitude}). "
-                f"Known landmarks/clues in this area include: [{context_clues}]. "
-                f"The specific user-provided description is: '{text_description}'"
-            )
-        else:
-            logger.info("No matching area found. Using raw description for geocoding.")
+        trace: List[AgentStep] = []
+        step_num = 1
 
-        # Step 3: LLM Geocoding
-        return self.llm_interface.geocode_with_llm(enriched_description)
+        # Step 1: Brainstorming & Planning
+        plan = {}
+        try:
+            plan = self.llm_interface.brainstorm_location_plan(text_description)
+            trace.append(AgentStep(step_number=step_num, step_name="Brainstorm & Plan", details=f"Extracted landmarks and created search queries.", status="Success", result=plan))
+        except Exception as e:
+            trace.append(AgentStep(step_number=step_num, step_name="Brainstorm & Plan", details=f"Failed to create plan: {e}", status="Failure"))
+            return GeocodeResponse(latitude=0, longitude=0, confidence=0, reasoning="Agent failed at planning stage.", source="llm-agent", agent_trace=trace)
+        step_num += 1
+
+        # Step 2: Contextual Search (Simulated)
+        search_results = []
+        try:
+            for query in plan.get("search_queries", []):
+                result = self.llm_interface.simulate_web_search(query)
+                search_results.append(f"- Query '{query}': {result}")
+            details_text = "\n".join(search_results) if search_results else "No search queries were generated."
+            trace.append(AgentStep(step_number=step_num, step_name="Simulated Web Search", details="Gathered contextual information from simulated search queries.", status="Success", result={"search_summaries": search_results}))
+        except Exception as e:
+            trace.append(AgentStep(step_number=step_num, step_name="Simulated Web Search", details=f"Failed during search: {e}", status="Failure"))
+            # Continue with what we have
+        step_num += 1
+
+        # Step 3: Synthesize & Pinpoint
+        try:
+            context_for_synthesis = (
+                f"The user is at UC San Diego. "
+                f"Key landmarks identified: {', '.join(plan.get('key_landmarks', ['N/A']))}. "
+                f"Simulated search results:\n{''.join(search_results)}"
+            )
+            final_geo = self.llm_interface.synthesize_and_geocode(text_description, context_for_synthesis)
+            trace.append(AgentStep(step_number=step_num, step_name="Synthesize & Pinpoint", details="Synthesized all information to generate final coordinates and confidence score.", status="Success", result=final_geo))
+            return GeocodeResponse(
+                latitude=final_geo['latitude'],
+                longitude=final_geo['longitude'],
+                confidence=final_geo['confidence'],
+                reasoning=final_geo['reasoning'],
+                source="llm-agent",
+                agent_trace=trace
+            )
+        except Exception as e:
+            trace.append(AgentStep(step_number=step_num, step_name="Synthesize & Pinpoint", details=f"Failed to synthesize location: {e}", status="Failure"))
+            return GeocodeResponse(latitude=0, longitude=0, confidence=0, reasoning="Agent failed at synthesis stage.", source="llm-agent", agent_trace=trace)
 
 # Singleton instance
 geocoding_agent = GeocodingAgent()

@@ -18,17 +18,17 @@ primary_region = "lax"
   processes = ["app"]
 
   [[http_service.checks]]
-    interval = "10s"
-    timeout = "2s"
-    grace_period = "5s"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "20s" # Give more time for services to start
     method = "get"
-    path = "/"
+    path = "/" # Check the landing page served by NGINX
     protocol = "http"
 
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 1024 # Increased memory for all services
+  memory_mb = 2048 # Increased memory for all services
 
 [processes]
   app = "./run-all.sh web"

@@ -15,29 +15,37 @@
       }
       body { font-family: 'Inter', sans-serif; background: var(--background); color: var(--text-primary); }
       .container { max-width: 1400px; margin: 2rem auto; padding: 2rem; }
-      .main-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 2rem; align-items: flex-start; }
+      .main-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 2rem; align-items: flex-start; }
       .card { background: var(--surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 1.5rem; }
       .card h2 { font-size: 1.5rem; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: .5rem; }
       .form-group { margin-bottom: 1rem; }
       .form-label { display: block; font-weight: 500; margin-bottom: .5rem; }
-      .form-input, .form-textarea { width: 100%; padding: .75rem; background: #222; border: 1px solid #444; border-radius: 6px; color: var(--text-primary); font-size: 1rem; }
-      .form-textarea { resize: vertical; min-height: 100px; }
-      .btn { padding: .75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid transparent; transition: background-color .2s ease; }
+      .form-textarea { width: 100%; padding: .75rem; background: #222; border: 1px solid #444; border-radius: 6px; color: var(--text-primary); font-size: 1rem; resize: vertical; min-height: 120px; }
+      .btn { padding: .75rem 1.5rem; border-radius: 6px; cursor: pointer; font-weight: 500; border: 1px solid transparent; transition: all .2s ease; }
       .btn-primary { background: var(--primary); color: #000; border-color: var(--primary); }
-      #map { height: 500px; border-radius: 8px; background-color: #333; }
+      .btn-primary:disabled { background: #555; border-color: #555; cursor: not-allowed; }
+      #map { height: 600px; border-radius: 8px; background-color: #333; }
       .result-card { margin-top: 1.5rem; display: none; }
-      .area-list li { display: flex; justify-content: space-between; padding: .5rem; border-radius: 4px; }
-      .area-list li:hover { background: #2a2a2a; }
       .back-link { display: inline-flex; align-items: center; color: var(--text-primary); text-decoration: none; margin-bottom: 2rem; padding: 0.75rem 1.5rem; background: var(--surface); border: 1px solid var(--border-color); border-radius: 8px; }
       .toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #222; color: #fff; padding: 1rem 2rem; border-radius: 8px; z-index: 2000; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
       .toast.show { opacity: 1; } .toast.success { background: var(--success); } .toast.error { background: var(--danger); }
       .fa-spin { animation: spin 1s linear infinite; } @keyframes spin { to { transform: rotate(360deg); } }
+      .agent-trace-container { margin-top: 1.5rem; }
+      .agent-step { background: #222; border-left: 3px solid var(--primary); padding: 1rem; margin-bottom: 0.75rem; border-radius: 0 8px 8px 0; display: none; }
+      .agent-step.visible { display: block; animation: fadeIn .5s forwards; }
+      @keyframes fadeIn { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
+      .agent-step strong { color: var(--primary); display: block; margin-bottom: .5rem; font-size: 1.1em; }
+      .agent-step p { margin: 0; color: var(--text-secondary); }
+      .agent-step pre { background: #111; padding: .5rem; border-radius: 4px; margin-top: .5rem; white-space: pre-wrap; word-break: break-all; font-size: 0.9em; max-height: 200px; overflow-y: auto; }
+      .agent-step.status-failure { border-left-color: var(--danger); }
+      .agent-step.status-failure strong { color: var(--danger); }
     </style>
 </head>
 <body>
 <div class="container">
     <a href="/dashboard/" class="back-link"><i class="fas fa-arrow-left"></i> Back to Dashboard</a>
-    <h1><i class="fas fa-globe-americas"></i> Geocoding Agent</h1>
+    <h1><i class="fas fa-brain"></i> Agentic Geocoding</h1>
+    <p style="margin-top:-0.5rem; margin-bottom:2rem; color: var(--text-secondary);">An advanced agent to find locations from natural language descriptions.</p>
     <div class="main-grid">
         <!-- Left Column -->
         <div>
@@ -46,43 +54,29 @@
                 <form id="geocode-form">
                     <div class="form-group">
                         <label for="description" class="form-label">Location Description</label>
-                        <textarea id="description" class="form-textarea" placeholder="e.g., 'Third floor of the red brick building by the clocktower at Disneyland' or '123 Main St, Anytown'" required></textarea>
+                        <textarea id="description" class="form-textarea" placeholder="e.g., 'the biggest library in UC San Diego'" required></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary" style="width:100%;"><i class="fas fa-map-marker-alt"></i> Geocode</button>
+                    <button type="submit" id="geocode-btn" class="btn btn-primary" style="width:100%;"><i class="fas fa-map-marker-alt"></i> Pinpoint Location</button>
                 </form>
-                <div class="card result-card" id="result-card">
-                    <h4>Geocoding Result</h4>
-                    <p><strong>Coordinates:</strong> <span id="result-coords"></span></p>
-                    <p><strong>Confidence:</strong> <span id="result-confidence"></span></p>
-                    <p><strong>Reasoning:</strong> <span id="result-reasoning"></span></p>
-                </div>
             </div>
-            <div class="card" style="margin-top:2rem;">
-                <h2><i class="fas fa-layer-group"></i> Manage Areas</h2>
-                <ul class="area-list" id="area-list"></ul>
+
+            <div class="card agent-trace-container">
+                <h2><i class="fas fa-project-diagram"></i> Agent Steps</h2>
+                <div id="agent-trace">
+                    <p style="color:#888;">Agent's thought process will appear here...</p>
+                </div>
             </div>
         </div>
         <!-- Right Column -->
         <div>
             <div class="card">
-                <h2><i class="fas fa-map"></i> Map View & Area Creator</h2>
+                <h2><i class="fas fa-map"></i> Map View</h2>
                 <div id="map"></div>
-                <div class="card result-card" id="area-creator-card">
-                    <h4>Create New Area</h4>
-                    <form id="area-form">
-                        <input type="hidden" id="area-lat">
-                        <input type="hidden" id="area-lon">
-                        <p><strong>Selected Coords:</strong> <span id="selected-coords"></span></p>
-                        <div class="form-group">
-                            <label for="area-name" class="form-label">Area Name</label>
-                            <input type="text" id="area-name" class="form-input" required placeholder="e.g., Disneyland Park">
-                        </div>
-                         <div class="form-group">
-                            <label for="area-clues" class="form-label">Context Clues (comma-separated)</label>
-                            <textarea id="area-clues" class="form-textarea" placeholder="e.g., main street, sleeping beauty castle, big thunder mountain"></textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary" style="width:100%;">Save Area</button>
-                    </form>
+                <div class="card result-card" id="result-card">
+                    <h4><i class="fas fa-check-circle"></i> Final Result</h4>
+                    <p><strong>Coordinates:</strong> <span id="result-coords"></span></p>
+                    <p><strong>Confidence:</strong> <span id="result-confidence"></span></p>
+                    <p><strong>Agent Reasoning:</strong> <span id="result-reasoning"></span></p>
                 </div>
             </div>
         </div>
@@ -91,31 +85,34 @@
 <div id="toast" class="toast"></div>
 
 <script>
-    const map = L.map('map').setView([34.0522, -118.2437], 10); // Default to LA
+    const map = L.map('map').setView([32.8801, -117.2340], 15); // Default to UCSD
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
     }).addTo(map);
 
     let resultMarker = null;
-    let newAreaMarker = null;
 
-    // Toast Notification
     let toastTimeout;
     function showToast(message, type = "info") {
         const toast = document.getElementById("toast");
         toast.textContent = message;
         toast.className = `toast show ${type}`;
         clearTimeout(toastTimeout);
-        toastTimeout = setTimeout(() => toast.classList.remove("show"), 3000);
+        toastTimeout = setTimeout(() => toast.classList.remove("show"), 5000);
     }
 
-    // Geocoding Logic
     document.getElementById('geocode-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         const description = document.getElementById('description').value;
-        const btn = e.target.querySelector('button');
-        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Geocoding...';
+        const btn = document.getElementById('geocode-btn');
+        const traceContainer = document.getElementById('agent-trace');
+        const resultCard = document.getElementById('result-card');
+
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agent is Thinking...';
         btn.disabled = true;
+        traceContainer.innerHTML = '<p style="color:#888;">Initializing agent...</p>';
+        resultCard.style.display = 'none';
+        if (resultMarker) map.removeLayer(resultMarker);
 
         try {
             const response = await fetch('/dashboard/api/geo/geocode', {
@@ -124,101 +121,58 @@
                 body: JSON.stringify({ text_description: description })
             });
             const result = await response.json();
-            if (!response.ok) throw new Error(result.detail);
+            if (!response.ok) throw new Error(result.detail || "An unknown error occurred.");
 
-            document.getElementById('result-card').style.display = 'block';
-            document.getElementById('result-coords').textContent = `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`;
-            document.getElementById('result-confidence').textContent = `${(result.confidence * 100).toFixed(1)}%`;
-            document.getElementById('result-reasoning').textContent = result.reasoning;
-            
-            const latlng = [result.latitude, result.longitude];
-            if (resultMarker) resultMarker.setLatLng(latlng);
-            else resultMarker = L.marker(latlng, {icon: L.icon({iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png', iconSize: [25, 41], iconAnchor: [12, 41]}) }).addTo(map);
-            resultMarker.bindPopup(`<b>Result:</b> ${description}<br>Confidence: ${(result.confidence * 100).toFixed(1)}%`).openPopup();
-            map.setView(latlng, 16);
+            traceContainer.innerHTML = '';
+            let totalDelay = 0;
+            const stepDelay = 600;
+
+            result.agent_trace.forEach((step, index) => {
+                setTimeout(() => {
+                    const stepEl = document.createElement('div');
+                    stepEl.className = 'agent-step';
+                    if (step.status === 'Failure') {
+                        stepEl.classList.add('status-failure');
+                    }
+                    const resultText = step.result ? `<pre>${JSON.stringify(step.result, null, 2)}</pre>` : '';
+
+                    stepEl.innerHTML = `
+                        <strong><i class="fas fa-chevron-right"></i> Step ${step.step_number}: ${step.step_name} (${step.status})</strong>
+                        <p>${step.details}</p>
+                        ${resultText}
+                    `;
+                    traceContainer.appendChild(stepEl);
+                    stepEl.classList.add('visible');
+                }, index * stepDelay);
+                totalDelay = (index + 1) * stepDelay;
+            });
+
+            setTimeout(() => {
+                 if (result.confidence > 0) {
+                    resultCard.style.display = 'block';
+                    document.getElementById('result-coords').textContent = `${result.latitude.toFixed(5)}, ${result.longitude.toFixed(5)}`;
+                    document.getElementById('result-confidence').textContent = `${(result.confidence * 100).toFixed(1)}%`;
+                    document.getElementById('result-reasoning').textContent = result.reasoning;
+                    
+                    const latlng = [result.latitude, result.longitude];
+                    resultMarker = L.marker(latlng).addTo(map);
+                    resultMarker.bindPopup(`<b>Final Location</b><br>Confidence: ${(result.confidence * 100).toFixed(1)}%`).openPopup();
+                    map.setView(latlng, 17);
+                 } else {
+                     showToast("Agent could not determine a location.", 'error');
+                 }
+
+                btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Pinpoint Location';
+                btn.disabled = false;
+            }, totalDelay);
 
         } catch (error) {
             showToast(`Error: ${error.message}`, 'error');
-        } finally {
-            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Geocode';
+            traceContainer.innerHTML = `<div class="agent-step visible status-failure"><strong><i class="fas fa-exclamation-triangle"></i> System Error</strong><p>${error.message}</p></div>`;
+            btn.innerHTML = '<i class="fas fa-map-marker-alt"></i> Pinpoint Location';
             btn.disabled = false;
         }
     });
-
-    // Area Management Logic
-    async function loadAreas() {
-        try {
-            const response = await fetch('/dashboard/api/geo/areas');
-            const areas = await response.json();
-            const listEl = document.getElementById('area-list');
-            listEl.innerHTML = '';
-            areas.forEach(area => {
-                const li = document.createElement('li');
-                li.innerHTML = `<span>${area.name}</span><button class="btn" style="padding: .2rem .5rem;" onclick="deleteArea('${area.name}')"><i class="fas fa-trash"></i></button>`;
-                listEl.appendChild(li);
-            });
-        } catch (error) { showToast('Failed to load areas.', 'error'); }
-    }
-
-    async function deleteArea(name) {
-        if (!confirm(`Are you sure you want to delete the area "${name}"?`)) return;
-        try {
-            const response = await fetch(`/dashboard/api/geo/areas/${name}`, { method: 'DELETE' });
-            // A successful 204 No Content response has no body, so we check status
-            if (response.status !== 204) { 
-                const err = await response.json().catch(() => ({detail: "Failed to delete area."})); 
-                throw new Error(err.detail); 
-            }
-            showToast('Area deleted successfully.', 'success');
-            loadAreas();
-        } catch (error) { showToast(`Error: ${error.message}`, 'error'); }
-    }
-
-    map.on('click', (e) => {
-        const { lat, lng } = e.latlng;
-        document.getElementById('area-creator-card').style.display = 'block';
-        document.getElementById('selected-coords').textContent = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
-        document.getElementById('area-lat').value = lat;
-        document.getElementById('area-lon').value = lng;
-
-        if (newAreaMarker) newAreaMarker.setLatLng(e.latlng);
-        else newAreaMarker = L.marker(e.latlng).addTo(map);
-        newAreaMarker.bindPopup('Creating new area here').openPopup();
-    });
-
-    document.getElementById('area-form').addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const areaData = {
-            name: document.getElementById('area-name').value,
-            latitude: parseFloat(document.getElementById('area-lat').value),
-            longitude: parseFloat(document.getElementById('area-lon').value),
-            context_clues: document.getElementById('area-clues').value.split(',').map(s => s.trim()).filter(Boolean),
-            aliases: [], // Can be added later
-            radius_meters: 500
-        };
-        try {
-            const response = await fetch('/dashboard/api/geo/areas', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(areaData)
-            });
-            const result = await response.json();
-            if (!response.ok) throw new Error(result.detail);
-
-            showToast('Area saved successfully!', 'success');
-            loadAreas();
-            e.target.reset();
-            document.getElementById('area-creator-card').style.display = 'none';
-            if (newAreaMarker) {
-                map.removeLayer(newAreaMarker);
-                newAreaMarker = null;
-            }
-        } catch (error) {
-            showToast(`Error saving area: ${error.message}`, 'error');
-        }
-    });
-
-    document.addEventListener('DOMContentLoaded', loadAreas);
 </script>
 </body>
 </html>
