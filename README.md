@@ -40,9 +40,11 @@ The EIDO-JSON format is the canonical data structure at the heart of the Sentine
 
 A key principle of the EIDO standard is the concept of a composite incident. Emergency events evolve as information arrives from multiple sources, such as initial calls, dispatch updates, unit status changes, and field reports. Each new piece of information is structured as a distinct EIDO-JSON document that captures the incident state at a given time. The [IDX Agent](idx-agent/) links these documents to a common incident context, creating a linked representation of the incident rather than a single static record.
 
-The overall design is shown in the system architecture. Incoming incident reports from multiple sources are first processed by the [EIDO Agent](eido-agent/), which produces standardized EIDO-JSON objects. These objects are persisted and made available to other system components. The IDX Agent operates over this store to associate related EIDOs with a common incident context and to maintain composite incident views. The [Geocoding Agent](geocoding-agent/) enriches location information using external reference data and services. Together, the agents operate asynchronously, with each focusing on a well-defined responsibility while contributing to a unified incident representation.
+The overall design is shown in Figure 1. Incoming incident reports from multiple sources are first processed by the [EIDO Agent](eido-agent/), which produces standardized EIDO-JSON objects. These objects are persisted and made available to other system components. The IDX Agent operates over this store to associate related EIDOs with a common incident context and to maintain composite incident views. The [Geocoding Agent](geocoding-agent/) enriches location information using external reference data and services. Together, the agents operate asynchronously, with each focusing on a well-defined responsibility while contributing to a unified incident representation.
 
-*(Figure 1. SentinelAI reference architecture showing the three-agent workflow. The EIDO Agent structures incoming reports into EIDO-JSON, the IDX Agent links related EIDOs into composite incidents, and the Geocoding Agent enriches location information. Agents interact through well-defined interfaces and support analytical and integration services.)*
+![SentinelAI reference architecture showing the three-agent workflow. The EIDO Agent structures incoming reports into EIDO-JSON, the IDX Agent links related EIDOs into composite incidents, and the Geocoding Agent enriches location information. Agents interact through well-defined interfaces and support analytical and integration services.](img/Figure1-SentinelAI.svg)
+
+*Figure 1. SentinelAI reference architecture showing the three-agent workflow.*
 
 This approach preserves how incident information accumulates over time while maintaining explicit links between related updates. Other systems can reconstruct incident history by following references between linked EIDO objects or retrieve the most recent state from the latest linked update. The design aligns with the operational realities of emergency response without imposing a rigid linear or graph-based incident model.
 
@@ -102,7 +104,9 @@ The new EIDO is linked to the incident `I*` that maximizes the similarity score,
 
 The threshold `τ` represents the system’s tolerance for ambiguity in incident association. Higher values enforce conservative linking, while lower values permit more permissive aggregation. `τ` is not specified by the NENA standard and is treated as an operational parameter that may vary by incident type, jurisdiction, or deployment setting. In practice, `τ` is configured based on tolerance for false aggregation rather than optimized for predictive accuracy.
 
-*(Figure 2 illustrates the decision logic employed by the IDX Agent to determine if an incoming report represents a new incident or an update to an existing one.)*
+![Decision logic employed by the IDX Agent to determine if an incoming report represents a new incident or an update to an existing one.](img/Figure2-SentinelAI.svg)
+
+*Figure 2. Decision logic employed by the IDX Agent to determine if an incoming report represents a new incident or an update to an existing one.*
 
 If no existing incident satisfies the threshold, the new EIDO initiates a new incident context.
 
@@ -137,6 +141,10 @@ To support interoperability with existing emergency management and geospatial sy
 FME is widely deployed in government and public safety environments and provides a practical integration surface for existing computer-aided dispatch, geospatial, and reporting systems. Rather than introducing a separate architectural layer, SentinelAI uses FME to enable bidirectional exchange between legacy data representations and EIDO-JSON through explicit reader and writer components. The following sections describe these components in detail.
 
 The EIDOReader and EIDOWriter components provide a practical mechanism for moving data between existing systems and EIDO-compliant representations. Together, they support bidirectional data exchange, allowing legacy 9-1-1 data to be converted into EIDO-JSON and enabling structured EIDO output to be consumed by existing public safety and geospatial systems.
+
+![Integration with Feature Manipulation Engine (FME) showing EIDOReader and EIDOWriter components facilitating bidirectional data exchange.](img/Figure3-SentinelAI.svg)
+
+*Figure 3. Integration with Feature Manipulation Engine (FME) showing EIDOReader and EIDOWriter components facilitating bidirectional data exchange.*
 
 ### 4.1 EIDOReader
 

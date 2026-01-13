@@ -1,0 +1,90 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="900" viewBox="0 0 1600 900">
+  <defs>
+    <marker id="arrow" markerWidth="6" markerHeight="6" refX="5.2" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M 0 0 L 6 3 L 0 6 z" fill="#111827" />
+    </marker>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="2" stdDeviation="3" flood-opacity="0.1"/>
+    </filter>
+  </defs>
+  
+  <rect x="0" y="0" width="1600" height="900" fill="#ffffff" />
+  
+  <!-- Title -->
+  <text x="800" y="60" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="34" font-weight="700" fill="#111827">Figure 3. Composite Incident Evolution</text>
+
+  <!-- TIMELINE AXIS -->
+  <line x1="100" y1="120" x2="100" y2="800" stroke="#9CA3AF" stroke-width="4" stroke-dasharray="8,8" />
+  <text x="70" y="450" text-anchor="middle" transform="rotate(-90, 70, 450)" font-family="Inter, Arial, sans-serif" font-size="20" font-weight="600" fill="#6B7280">Timeline (t)</text>
+
+  <!-- EVENT 1: The Call -->
+  <circle cx="100" cy="130" r="10" fill="#111827" />
+  <text x="130" y="135" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">t₀: 911 Call Received</text>
+  
+  <rect x="180" y="150" width="350" height="140" rx="12" ry="12" fill="#FFFFFF" stroke="#111827" stroke-width="2" filter="url(#shadow)" />
+  <rect x="180" y="150" width="350" height="40" rx="12" ry="12" fill="#E5E7EB" stroke="none"/> <!-- Header -->
+  <text x="200" y="177" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">EIDO Report #1 (Source: Call)</text>
+  <text x="200" y="210" font-family="monospace" font-size="14" fill="#374151">• loc: "Blue Warehouse"</text>
+  <text x="200" y="230" font-family="monospace" font-size="14" fill="#374151">• type: "Structure Fire"</text>
+  <text x="200" y="250" font-family="monospace" font-size="14" fill="#374151">• desc: "Smoke visible"</text>
+
+  <!-- EVENT 2: Dispatch -->
+  <circle cx="100" cy="385" r="10" fill="#111827" />
+  <text x="130" y="390" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">t₁: Units Dispatched</text>
+
+  <rect x="180" y="400" width="350" height="140" rx="12" ry="12" fill="#FFFFFF" stroke="#111827" stroke-width="2" filter="url(#shadow)" />
+  <rect x="180" y="400" width="350" height="40" rx="12" ry="12" fill="#E5E7EB" stroke="none"/>
+  <text x="200" y="427" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">EIDO Report #2 (Source: CAD)</text>
+  <text x="200" y="460" font-family="monospace" font-size="14" fill="#374151">• resource: "Engine 5"</text>
+  <text x="200" y="480" font-family="monospace" font-size="14" fill="#374151">• status: "Dispatched"</text>
+  <text x="200" y="500" font-family="monospace" font-size="14" fill="#374151">• priority: 1</text>
+
+  <!-- EVENT 3: Field Update -->
+  <circle cx="100" cy="630" r="10" fill="#111827" />
+  <text x="130" y="635" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">t₂: Field Update</text>
+
+  <rect x="180" y="650" width="350" height="140" rx="12" ry="12" fill="#FFFFFF" stroke="#111827" stroke-width="2" filter="url(#shadow)" />
+  <rect x="180" y="650" width="350" height="40" rx="12" ry="12" fill="#E5E7EB" stroke="none"/>
+  <text x="200" y="677" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="700" fill="#111827">EIDO Report #3 (Source: Radio)</text>
+  <text x="200" y="710" font-family="monospace" font-size="14" fill="#374151">• loc_coords: 34.05, -118.2</text>
+  <text x="200" y="730" font-family="monospace" font-size="14" fill="#374151">• status: "Working Fire"</text>
+  <text x="200" y="750" font-family="monospace" font-size="14" fill="#374151">• resource: "Engine 5 On Scene"</text>
+
+  <!-- AGGREGATION BRACKET -->
+  <path d="M 550 220 L 700 220 L 700 450 L 750 450" fill="none" stroke="#111827" stroke-width="3" />
+  <path d="M 550 470 L 650 470 L 650 450 L 700 450" fill="none" stroke="#111827" stroke-width="3" />
+  <path d="M 550 720 L 700 720 L 700 450" fill="none" stroke="#111827" stroke-width="3" marker-end="url(#arrow)" />
+  
+  <text x="640" y="350" text-anchor="middle" transform="rotate(-90, 640, 350)" font-family="Inter, Arial, sans-serif" font-size="16" font-weight="600" fill="#4B5563">IDX Linkage</text>
+
+  <!-- COMPOSITE VIEW CONTAINER -->
+  <rect x="760" y="200" width="700" height="500" rx="20" ry="20" fill="#F3F4F6" stroke="#111827" stroke-width="4" />
+  <text x="1110" y="250" text-anchor="middle" font-family="Inter, Arial, sans-serif" font-size="24" font-weight="800" fill="#111827">Composite Incident View (Current State)</text>
+  
+  <!-- COMPONENT: Location -->
+  <rect x="800" y="290" width="280" height="120" rx="8" ry="8" fill="#FFFFFF" stroke="#6B7280" stroke-width="1" />
+  <text x="820" y="320" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#1F2937">Location Component</text>
+  <text x="820" y="350" font-family="monospace" font-size="14" fill="#059669">Aggregated from EIDO #1 &amp; #3</text>
+  <path d="M 820 370 L 1050 370" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="820" y="390" font-family="monospace" font-size="14" fill="#374151">"Blue Warehouse" (34.05, -118.2)</text>
+
+  <!-- COMPONENT: Status -->
+  <rect x="1120" y="290" width="280" height="120" rx="8" ry="8" fill="#FFFFFF" stroke="#6B7280" stroke-width="1" />
+  <text x="1140" y="320" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#1F2937">Incident Status</text>
+  <text x="1140" y="350" font-family="monospace" font-size="14" fill="#059669">Latest update (EIDO #3)</text>
+  <path d="M 1140 370 L 1370 370" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="1140" y="390" font-family="monospace" font-size="14" fill="#374151">"Working Fire"</text>
+
+  <!-- COMPONENT: Resources -->
+  <rect x="800" y="440" width="600" height="120" rx="8" ry="8" fill="#FFFFFF" stroke="#6B7280" stroke-width="1" />
+  <text x="820" y="470" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#1F2937">Resource Component</text>
+  <text x="820" y="500" font-family="monospace" font-size="14" fill="#059669">Union of all reports (Eq 2)</text>
+  <path d="M 820 520 L 1370 520" stroke="#E5E7EB" stroke-width="1"/>
+  <text x="820" y="540" font-family="monospace" font-size="14" fill="#374151">Units: [Engine 5 (On Scene)]</text>
+
+  <!-- COMPONENT: History -->
+  <rect x="800" y="590" width="600" height="80" rx="8" ry="8" fill="#E0E7FF" stroke="#4F46E5" stroke-width="1" />
+  <text x="820" y="620" font-family="Inter, Arial, sans-serif" font-size="14" font-weight="700" fill="#312E81">Linked IDs (Traceability)</text>
+  <text x="820" y="645" font-family="monospace" font-size="14" fill="#312E81">linked_ids: [uuid-1, uuid-2, uuid-3]</text>
+
+</svg>
